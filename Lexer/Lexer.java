@@ -4,10 +4,8 @@ import java.util.regex.*;
 
 public class Lexer {
 
-    // Reserved Keywords and their corresponding TokenType
     private static final Map<String, TokenType> reservedKeywords = new HashMap<>();
     
-    // Patterns for token classes
     private static final Pattern V_NAMES_PATTERN = Pattern.compile("V_[a-z]([a-z]|[0-9])*");
     private static final Pattern F_NAMES_PATTERN = Pattern.compile("F_[a-z]([a-z]|[0-9])*");
     private static final Pattern TEXT_SNIPPET_PATTERN = Pattern.compile("\"[A-Z][a-z]{0,7}\"");
@@ -15,7 +13,6 @@ public class Lexer {
         "0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]"
     );
 
-    // Static block to initialize reserved keywords
     static {
         reservedKeywords.put("main", TokenType.MAIN);
         reservedKeywords.put("num", TokenType.NUM);
@@ -49,8 +46,7 @@ public class Lexer {
         reservedKeywords.put("return", TokenType.RETURN);
     }
 
-    // Method to tokenize the input from a text file and return an XML representation
-    public String tokenizeToXML(String filePath) throws IOException {
+    public String tokenizeToXML(String filePath) throws IOException, IllegalArgumentException {
         StringBuilder xmlOutput = new StringBuilder();
         xmlOutput.append("<TOKENSTREAM>\n");
         BufferedReader reader = new BufferedReader(new FileReader(filePath));
@@ -59,12 +55,9 @@ public class Lexer {
         int id = 1;
 
         while ((line = reader.readLine()) != null) {
-            // Remove any spaces or newlines
             line = line.trim();
 
-            // Tokenize by looping through characters and matching patterns
             for (int i = 0; i < line.length(); ) {
-                // Skip spaces and newlines
                 if (Character.isWhitespace(line.charAt(i))) {
                     i++;
                     continue;
@@ -72,7 +65,6 @@ public class Lexer {
 
                 Token token = null;
 
-                // Check for reserved keywords or symbols
                 token = matchReserved(line.substring(i));
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
@@ -80,7 +72,6 @@ public class Lexer {
                     continue;
                 }
 
-                // Check for function names (F_NAMES)
                 token = matchPattern(F_NAMES_PATTERN, line.substring(i), TokenType.F_NAMES);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
@@ -88,7 +79,6 @@ public class Lexer {
                     continue;
                 }
 
-                // Check for variable names (V_NAMES)
                 token = matchPattern(V_NAMES_PATTERN, line.substring(i), TokenType.V_NAMES);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
@@ -96,7 +86,6 @@ public class Lexer {
                     continue;
                 }
 
-                // Check for text snippets (TEXT_SNIPPET)
                 token = matchPattern(TEXT_SNIPPET_PATTERN, line.substring(i), TokenType.TEXT_SNIPPET);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
@@ -104,7 +93,6 @@ public class Lexer {
                     continue;
                 }
 
-                // Check for numbers (N_NUMBERS)
                 token = matchPattern(N_NUMBERS_PATTERN, line.substring(i), TokenType.N_NUMBERS);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
@@ -112,18 +100,15 @@ public class Lexer {
                     continue;
                 }
 
-                // Handle individual symbols as separate tokens
                 char currentChar = line.charAt(i);
                 if (isSymbol(currentChar)) {
                     token = new Token(getTokenTypeForSymbol(currentChar), String.valueOf(currentChar));
                     xmlOutput.append(formatToken(token, id++));
-                    i++;  // Move to the next character
+                    i++;
                     continue;
                 }
 
-                // Handle unrecognized tokens
-                System.err.println("Unrecognized token at: " + line.substring(i));
-                i++;
+                throw new IllegalArgumentException("Lexical Error: Unrecognized token at index " + i + ": '" + line.substring(i) + "'");
             }
         }
 
@@ -132,7 +117,6 @@ public class Lexer {
         return xmlOutput.toString();
     }
 
-    // Method to match a reserved keyword or symbol
     private Token matchReserved(String input) {
         for (Map.Entry<String, TokenType> entry : reservedKeywords.entrySet()) {
             String key = entry.getKey();
@@ -143,7 +127,6 @@ public class Lexer {
         return null;
     }
 
-    // Method to match a pattern for token classes
     private Token matchPattern(Pattern pattern, String input, TokenType type) {
         Matcher matcher = pattern.matcher(input);
         if (matcher.lookingAt()) {
@@ -152,7 +135,6 @@ public class Lexer {
         return null;
     }
 
-    // Helper method to format tokens into XML
     private String formatToken(Token token, int id) {
         return "<TOK>\n" +
                "<ID>" + id + "</ID>\n" +
@@ -161,7 +143,6 @@ public class Lexer {
                "</TOK>\n";
     }
 
-    // Helper method to get the class of the token based on its TokenType
     private String getTokenClass(TokenType type) {
         switch (type) {
             case MAIN:
@@ -208,12 +189,10 @@ public class Lexer {
         }
     }
 
-    // Helper method to check if the character is a symbol
     private boolean isSymbol(char c) {
         return c == ';' || c == '(' || c == ')' || c == ',' || c == '{' || c == '}';
     }
 
-    // Helper method to get the TokenType for a symbol
     private TokenType getTokenTypeForSymbol(char c) {
         switch (c) {
             case ';': return TokenType.SEMICOLON;
@@ -226,7 +205,6 @@ public class Lexer {
         }
     }
 
-    // Method to write XML output to a file
     public void saveXMLToFile(String xmlOutput, String outputFilePath) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath));
         writer.write(xmlOutput);
@@ -236,14 +214,12 @@ public class Lexer {
     public static void main(String[] args) {
         Lexer lexer = new Lexer();
         try {
-            // Tokenize input and save it to a file
-            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  // Path to your input .txt file
-            lexer.saveXMLToFile(xmlOutput, "output.xml");  // Path to save the XML output
+            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");
+            lexer.saveXMLToFile(xmlOutput, "output.xml");
 
             System.out.println("XML file saved to output.xml.");
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | IllegalArgumentException e) {
+            System.err.println(e.getMessage());
         }
     }
 }
-

@@ -2,7 +2,7 @@ main num V_x, num V_y, num V_z,
 begin
     V_x < input;
     V_y = 20;
-    V_z = F_multiply(V_x, V_y, 10);
+    V_z = F_multiply(V_x, V_y);
     print V_z;
     halt;
 end
