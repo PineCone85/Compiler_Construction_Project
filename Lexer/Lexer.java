@@ -6,7 +6,7 @@ public class Lexer {
 
     // Reserved Keywords and their corresponding TokenType
     private static final Map<String, TokenType> reservedKeywords = new HashMap<>();
-
+    
     // Patterns for token classes
     private static final Pattern V_NAMES_PATTERN = Pattern.compile("V_[a-z]([a-z]|[0-9])*");
     private static final Pattern F_NAMES_PATTERN = Pattern.compile("F_[a-z]([a-z]|[0-9])*");
@@ -56,6 +56,8 @@ public class Lexer {
 
         String line;
         int id = 1;
+        boolean inFunctionCall = false;
+        int paramCount = 0;
 
         while ((line = reader.readLine()) != null) {
             // Remove any spaces or newlines
@@ -69,21 +71,26 @@ public class Lexer {
                     continue;
                 }
 
-                // Try matching each token type and increment i accordingly
                 Token token = null;
 
                 // Check for reserved keywords or symbols
                 token = matchReserved(line.substring(i));
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
-                    i += token.getValue().length();
-                    continue;
-                }
 
-                // Check for variable names (V_NAMES)
-                token = matchPattern(V_NAMES_PATTERN, line.substring(i), TokenType.V_NAMES);
-                if (token != null) {
-                    xmlOutput.append(formatToken(token, id++));
+                    // Check if this is a function call (e.g., `F_name(`)
+                    if (token.getType() == TokenType.LPAREN && inFunctionCall) {
+                        paramCount = 0;  // Reset parameter count when a function starts
+                    }
+
+                    if (token.getType() == TokenType.RPAREN && inFunctionCall) {
+                        inFunctionCall = false;  // End function call
+                        // Validate the number of parameters (should be exactly 3)
+                        if (paramCount != 3) {
+                            System.err.println("Error: Function call has " + paramCount + " parameters, but exactly 3 are required.");
+                        }
+                    }
+
                     i += token.getValue().length();
                     continue;
                 }
@@ -92,6 +99,18 @@ public class Lexer {
                 token = matchPattern(F_NAMES_PATTERN, line.substring(i), TokenType.F_NAMES);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
+                    inFunctionCall = true;  // Start tracking a function call
+                    i += token.getValue().length();
+                    continue;
+                }
+
+                // Check for variable names (V_NAMES)
+                token = matchPattern(V_NAMES_PATTERN, line.substring(i), TokenType.V_NAMES);
+                if (token != null) {
+                    xmlOutput.append(formatToken(token, id++));
+                    if (inFunctionCall) {
+                        paramCount++;  // Count the parameters in the function call
+                    }
                     i += token.getValue().length();
                     continue;
                 }
@@ -100,6 +119,9 @@ public class Lexer {
                 token = matchPattern(TEXT_SNIPPET_PATTERN, line.substring(i), TokenType.TEXT_SNIPPET);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
+                    if (inFunctionCall) {
+                        paramCount++;  // Count the parameters in the function call
+                    }
                     i += token.getValue().length();
                     continue;
                 }
@@ -108,7 +130,25 @@ public class Lexer {
                 token = matchPattern(N_NUMBERS_PATTERN, line.substring(i), TokenType.N_NUMBERS);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
+                    if (inFunctionCall) {
+                        paramCount++;  // Count the parameters in the function call
+                    }
                     i += token.getValue().length();
+                    continue;
+                }
+
+                // Handle individual symbols as separate tokens
+                char currentChar = line.charAt(i);
+                if (isSymbol(currentChar)) {
+                    token = new Token(getTokenTypeForSymbol(currentChar), String.valueOf(currentChar));
+                    xmlOutput.append(formatToken(token, id++));
+
+                    // Count commas as separators between function parameters
+                    if (currentChar == ',' && inFunctionCall) {
+                        paramCount++;
+                    }
+
+                    i++;  // Move to the next character
                     continue;
                 }
 
@@ -198,10 +238,28 @@ public class Lexer {
         }
     }
 
+    // Helper method to check if the character is a symbol
+    private boolean isSymbol(char c) {
+        return c == ';' || c == '(' || c == ')' || c == ',' || c == '{' || c == '}';
+    }
+
+    // Helper method to get the TokenType for a symbol
+    private TokenType getTokenTypeForSymbol(char c) {
+        switch (c) {
+            case ';': return TokenType.SEMICOLON;
+            case '(': return TokenType.LPAREN;
+            case ')': return TokenType.RPAREN;
+            case ',': return TokenType.COMMA;
+            case '{': return TokenType.LBRACE;
+            case '}': return TokenType.RBRACE;
+            default: return null;
+        }
+    }
+
     public static void main(String[] args) {
         Lexer lexer = new Lexer();
         try {
-            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  
+            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt"); 
             System.out.println(xmlOutput); 
         } catch (IOException e) {
             e.printStackTrace();
