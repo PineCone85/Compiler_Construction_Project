@@ -56,8 +56,6 @@ public class Lexer {
 
         String line;
         int id = 1;
-        boolean inFunctionCall = false;
-        int paramCount = 0;
 
         while ((line = reader.readLine()) != null) {
             // Remove any spaces or newlines
@@ -77,20 +75,6 @@ public class Lexer {
                 token = matchReserved(line.substring(i));
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
-
-                    // Check if this is a function call (e.g., `F_name(`)
-                    if (token.getType() == TokenType.LPAREN && inFunctionCall) {
-                        paramCount = 0;  // Reset parameter count when a function starts
-                    }
-
-                    if (token.getType() == TokenType.RPAREN && inFunctionCall) {
-                        inFunctionCall = false;  // End function call
-                        // Validate the number of parameters (should be exactly 3)
-                        if (paramCount != 3) {
-                            System.err.println("Error: Function call has " + paramCount + " parameters, but exactly 3 are required.");
-                        }
-                    }
-
                     i += token.getValue().length();
                     continue;
                 }
@@ -99,7 +83,6 @@ public class Lexer {
                 token = matchPattern(F_NAMES_PATTERN, line.substring(i), TokenType.F_NAMES);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
-                    inFunctionCall = true;  // Start tracking a function call
                     i += token.getValue().length();
                     continue;
                 }
@@ -108,9 +91,6 @@ public class Lexer {
                 token = matchPattern(V_NAMES_PATTERN, line.substring(i), TokenType.V_NAMES);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
-                    if (inFunctionCall) {
-                        paramCount++;  // Count the parameters in the function call
-                    }
                     i += token.getValue().length();
                     continue;
                 }
@@ -119,9 +99,6 @@ public class Lexer {
                 token = matchPattern(TEXT_SNIPPET_PATTERN, line.substring(i), TokenType.TEXT_SNIPPET);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
-                    if (inFunctionCall) {
-                        paramCount++;  // Count the parameters in the function call
-                    }
                     i += token.getValue().length();
                     continue;
                 }
@@ -130,9 +107,6 @@ public class Lexer {
                 token = matchPattern(N_NUMBERS_PATTERN, line.substring(i), TokenType.N_NUMBERS);
                 if (token != null) {
                     xmlOutput.append(formatToken(token, id++));
-                    if (inFunctionCall) {
-                        paramCount++;  // Count the parameters in the function call
-                    }
                     i += token.getValue().length();
                     continue;
                 }
@@ -142,12 +116,6 @@ public class Lexer {
                 if (isSymbol(currentChar)) {
                     token = new Token(getTokenTypeForSymbol(currentChar), String.valueOf(currentChar));
                     xmlOutput.append(formatToken(token, id++));
-
-                    // Count commas as separators between function parameters
-                    if (currentChar == ',' && inFunctionCall) {
-                        paramCount++;
-                    }
-
                     i++;  // Move to the next character
                     continue;
                 }
@@ -259,8 +227,8 @@ public class Lexer {
     public static void main(String[] args) {
         Lexer lexer = new Lexer();
         try {
-            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt"); 
-            System.out.println(xmlOutput); 
+            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  // Path to your .txt file
+            System.out.println(xmlOutput);  // Print the XML to the console
         } catch (IOException e) {
             e.printStackTrace();
         }
