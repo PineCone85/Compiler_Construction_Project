@@ -1,9 +1,18 @@
-main num V_n, 
+main num V_x, num V_y, num V_z, 
 begin
-    V_n < input;
-    if grt(V_n, 100) then
-        print V_n;
-    else
-        V_n = 50;
+    V_x < input;
+    V_y = 20;
+    V_z = F_multiply(V_x, V_y, 10);
+    print V_z;
     halt;
 end
+
+num F_multiply(V_a, V_b, V_c)
+{
+    num V_result, 
+    begin
+        V_result = mul(V_a, V_b);
+        V_result = add(V_result, V_c);
+        print V_result;
+    end
+}

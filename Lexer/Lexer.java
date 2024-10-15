@@ -201,8 +201,8 @@ public class Lexer {
     public static void main(String[] args) {
         Lexer lexer = new Lexer();
         try {
-            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  // Path to your .txt file
-            System.out.println(xmlOutput);  // Print the XML to the console
+            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  
+            System.out.println(xmlOutput); 
         } catch (IOException e) {
             e.printStackTrace();
         }
