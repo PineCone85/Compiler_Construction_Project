@@ -46,6 +46,7 @@ public class Lexer {
         reservedKeywords.put("void", TokenType.VOID);
         reservedKeywords.put("{", TokenType.LBRACE);
         reservedKeywords.put("}", TokenType.RBRACE);
+        reservedKeywords.put("return", TokenType.RETURN);
     }
 
     // Method to tokenize the input from a text file and return an XML representation
@@ -191,6 +192,7 @@ public class Lexer {
             case DIV:
             case VOID:
             case LBRACE:
+            case RETURN:
             case RBRACE:
                 return "reserved_keyword";
             case V_NAMES:
@@ -224,13 +226,24 @@ public class Lexer {
         }
     }
 
+    // Method to write XML output to a file
+    public void saveXMLToFile(String xmlOutput, String outputFilePath) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath));
+        writer.write(xmlOutput);
+        writer.close();
+    }
+
     public static void main(String[] args) {
         Lexer lexer = new Lexer();
         try {
-            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  // Path to your .txt file
-            System.out.println(xmlOutput);  // Print the XML to the console
+            // Tokenize input and save it to a file
+            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");  // Path to your input .txt file
+            lexer.saveXMLToFile(xmlOutput, "output.xml");  // Path to save the XML output
+
+            System.out.println("XML file saved to output.xml.");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 }
+

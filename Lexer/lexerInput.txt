@@ -14,5 +14,6 @@ num F_multiply(V_a, V_b, V_c)
         V_result = mul(V_a, V_b);
         V_result = add(V_result, V_c);
         print V_result;
+        return V_result;
     end
 }
