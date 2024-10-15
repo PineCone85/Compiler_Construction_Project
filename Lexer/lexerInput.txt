@@ -1,0 +1,9 @@
+main num V_n, 
+begin
+    V_n < input;
+    if grt(V_n, 100) then
+        print V_n;
+    else
+        V_n = 50;
+    halt;
+end
