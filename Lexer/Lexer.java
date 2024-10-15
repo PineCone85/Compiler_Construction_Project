@@ -136,12 +136,25 @@ public class Lexer {
     }
 
     private String formatToken(Token token, int id) {
+        String tokenValue = escapeXMLCharacters(token.getValue());
         return "<TOK>\n" +
                "<ID>" + id + "</ID>\n" +
                "<CLASS>" + getTokenClass(token.getType()) + "</CLASS>\n" +
-               "<WORD>" + token.getValue() + "</WORD>\n" +
+               "<WORD>" + tokenValue + "</WORD>\n" +
                "</TOK>\n";
     }
+    
+    private String escapeXMLCharacters(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\"", "&quot;")
+                    .replace("'", "&apos;");
+    }
+    
 
     private String getTokenClass(TokenType type) {
         switch (type) {
