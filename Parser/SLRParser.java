@@ -118,13 +118,13 @@ public void parseInput(String input) {
     private String getProduction(int index) {
         switch (index) {
             case 0: return "PROG ::= main GLOBVARS ALGO FUNCTIONS";
-            case 1: return "GLOBVARS ::= "; 
+            case 1: return "GLOBVARS ::= "; // nullable
             case 2: return "GLOBVARS ::= VTYP VNAME , GLOBVARS";
             case 3: return "VTYP ::= num";
             case 4: return "VTYP ::= text";
             case 5: return "VNAME ::= V";
             case 6: return "ALGO ::= begin INSTRUC end";
-            case 7: return "INSTRUC ::= "; 
+            case 7: return "INSTRUC ::= "; // nullable
             case 8: return "INSTRUC ::= COMMAND ; INSTRUC";
             case 9: return "COMMAND ::= skip";
             case 10: return "COMMAND ::= halt";
@@ -132,54 +132,53 @@ public void parseInput(String input) {
             case 12: return "COMMAND ::= ASSIGN";
             case 13: return "COMMAND ::= CALL";
             case 14: return "COMMAND ::= BRANCH";
-            case 15: return "ATOMIC ::= VNAME";
-            case 16: return "ATOMIC ::= CONST";
-            case 17: return "CONST ::= N";
-            case 18: return "CONST ::= T";
-            case 19: return "ASSIGN ::= VNAME < input";
-            case 20: return "ASSIGN ::= VNAME = TERM";
-            case 21: return "CALL ::= FNAME ( ATOMIC , ATOMIC , ATOMIC )";
-            case 22: return "BRANCH ::= if COND then ALGO else ALGO";
-            case 23: return "TERM ::= ATOMIC";
-            case 24: return "TERM ::= CALL";
-            case 25: return "TERM ::= OP";
-            case 26: return "OP ::= UNOP( ARG )";
-            case 27: return "OP ::= BINOP( ARG , ARG )";
-            case 28: return "ARG ::= ATOMIC";
-            case 29: return "ARG ::= OP";
-            case 30: return "COND ::= SIMPLE";
-            case 31: return "COND ::= COMPOSIT";
-            case 32: return "SIMPLE ::= BINOP ( ATOMIC , ATOMIC )";
-            case 33: return "COMPOSIT ::= BINOP ( SIMPLE , SIMPLE )";
-            case 34: return "COMPOSIT ::= UNOP ( SIMPLE )";
-            case 35: return "UNOP ::= not";
-            case 36: return "UNOP ::= sqrt";
-            case 37: return "BINOP ::= or";
-            case 38: return "BINOP ::= and";
-            case 39: return "BINOP ::= eq";
-            case 40: return "BINOP ::= grt";
-            case 41: return "BINOP ::= add";
-            case 42: return "BINOP ::= sub";
-            case 43: return "BINOP ::= mul";
-            case 44: return "BINOP ::= div";
-            case 45: return "FNAME ::= F";
-            case 46: return "FUNCTIONS ::= ";
-            case 47: return "FUNCTIONS ::= DECL FUNCTIONS";
-            case 48: return "DECL ::= HEADER BODY";
-            case 49: return "HEADER ::= FTYP FNAME ( VNAME , VNAME , VNAME )";
-            case 50: return "FTYP ::= num";
-            case 51: return "FTYP ::= void";
-            case 52: return "BODY ::= PROLOG LOCVARS ALGO EPILOG SUBFUNCS end";
-            case 53: return "PROLOG ::= {";
-            case 54: return "EPILOG ::= }";
-            case 55: return "LOCVARS ::= VTYP VNAME , VTYP VNAME , VTYP VNAME ,";
-            case 56: return "SUBFUNCS ::= FUNCTIONS";
+            case 15: return "COMMAND ::= return ATOMIC";
+            case 16: return "ATOMIC ::= VNAME";
+            case 17: return "ATOMIC ::= CONST";
+            case 18: return "CONST ::= N";
+            case 19: return "CONST ::= T";
+            case 20: return "ASSIGN ::= VNAME < input";
+            case 21: return "ASSIGN ::= VNAME = TERM";
+            case 22: return "CALL ::= FNAME ( ATOMIC , ATOMIC , ATOMIC )";
+            case 23: return "BRANCH ::= if COND then ALGO else ALGO";
+            case 24: return "TERM ::= ATOMIC";
+            case 25: return "TERM ::= CALL";
+            case 26: return "TERM ::= OP";
+            case 27: return "OP ::= UNOP ( ARG )";
+            case 28: return "OP ::= BINOP ( ARG , ARG )";
+            case 29: return "ARG ::= ATOMIC";
+            case 30: return "ARG ::= OP";
+            case 31: return "COND ::= SIMPLE";
+            case 32: return "COND ::= COMPOSIT";
+            case 33: return "SIMPLE ::= BINOP ( ATOMIC , ATOMIC )";
+            case 34: return "COMPOSIT ::= BINOP ( SIMPLE , SIMPLE )";
+            case 35: return "COMPOSIT ::= UNOP ( SIMPLE )";
+            case 36: return "UNOP ::= not";
+            case 37: return "UNOP ::= sqrt";
+            case 38: return "BINOP ::= or";
+            case 39: return "BINOP ::= and";
+            case 40: return "BINOP ::= eq";
+            case 41: return "BINOP ::= grt";
+            case 42: return "BINOP ::= add";
+            case 43: return "BINOP ::= sub";
+            case 44: return "BINOP ::= mul";
+            case 45: return "BINOP ::= div";
+            case 46: return "FNAME ::= F";
+            case 47: return "FUNCTIONS ::= "; // nullable
+            case 48: return "FUNCTIONS ::= DECL FUNCTIONS";
+            case 49: return "DECL ::= HEADER BODY";
+            case 50: return "HEADER ::= FTYP FNAME ( VNAME , VNAME , VNAME )";
+            case 51: return "FTYP ::= num";
+            case 52: return "FTYP ::= void";
+            case 53: return "BODY ::= PROLOG LOCVARS ALGO EPILOG SUBFUNCS end";
+            case 54: return "PROLOG ::= {";
+            case 55: return "EPILOG ::= }";
+            case 56: return "LOCVARS ::= VTYP VNAME , VTYP VNAME , VTYP VNAME ,";
+            case 57: return "SUBFUNCS ::= FUNCTIONS";
             default: return "";
         }
     }
 
-
-    
 
     private int getPopCount(String production) {
         String rhs = production.split("::=")[1].trim(); 
@@ -204,9 +203,8 @@ public void parseInput(String input) {
 
     public static void main(String[] args) {
         SLRParser parser = new SLRParser();
-        parser.loadParseTable("P6.csv");
-        String input = "main begin end num F ( V , V , V ) { num V , text V , num V , begin end } end";
-                        
+        parser.loadParseTable("P7.csv");
+        String input = "main begin end num F ( V , V , V ) { num V , text V , num V , begin end } end";    
         parser.parseInput(input);
     }
 }
