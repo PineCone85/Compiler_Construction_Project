@@ -4,6 +4,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Element;
+import java.io.File;
+import java.util.ArrayList;
 
 public class SLRParser {
 
@@ -199,12 +206,52 @@ public void parseInput(String input) {
     
         return popCount; 
     }
+
+    public String parseXMLFile(String xmlFilePath) {
+        StringBuilder inputString = new StringBuilder();
+        try {
+            // Initialize XML Document parser
+            File inputFile = new File(xmlFilePath);
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            Document doc = dBuilder.parse(inputFile);
+            doc.getDocumentElement().normalize();
+    
+            // Get all <TOK> elements
+            NodeList tokenList = doc.getElementsByTagName("TOK");
+    
+            // Iterate over all <TOK> nodes to extract <WORD> and <CLASS> values
+            for (int i = 0; i < tokenList.getLength(); i++) {
+                Element tokElement = (Element) tokenList.item(i);
+    
+                // Get the <CLASS> element inside the <TOK>
+                String tokenClass = tokElement.getElementsByTagName("CLASS").item(0).getTextContent();
+    
+                // Check if <CLASS> is N, T, V, or F
+                if (tokenClass.equals("N") || tokenClass.equals("T") || tokenClass.equals("V") || tokenClass.equals("F")) {
+                    // Use the <CLASS> value (N, T, V, or F) as the token
+                    inputString.append(tokenClass).append(" ");
+                } else {
+                    // Otherwise, use the <WORD> element as the token
+                    String word = tokElement.getElementsByTagName("WORD").item(0).getTextContent();
+                    inputString.append(word).append(" ");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    
+        // Return the constructed input string, trimming any trailing spaces
+        return inputString.toString().trim();
+    }
+    
     
 
     public static void main(String[] args) {
         SLRParser parser = new SLRParser();
         parser.loadParseTable("P7.csv");
-        String input = "main begin end num F ( V , V , V ) { num V , text V , num V , begin end } end";    
+        String xmlFilePath = "output.xml";
+        String input = parser.parseXMLFile(xmlFilePath);
         parser.parseInput(input);
     }
 }
