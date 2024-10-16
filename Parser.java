@@ -31,11 +31,11 @@ public class Parser{
         new GrammarRule("COMMAND", new String[] {"skip"}),
         new GrammarRule("COMMAND", new String[] {"halt"}),
         new GrammarRule("COMMAND", new String[] {"print", "ATOMIC"}),
-        // new GrammarRule("COMMAND", new String[] {"ASSIGN"}),
+        new GrammarRule("COMMAND", new String[] {"ASSIGN"}),
         new GrammarRule("COMMAND", new String[] {"CALL"}),
         new GrammarRule("COMMAND", new String[] {"BRANCH"}),
 
-        // new GrammarRule("ATOMIC", new String[] {"VNAME"}),
+        new GrammarRule("ATOMIC", new String[] {"VNAME"}),
         new GrammarRule("ATOMIC", new String[] {"CONST"}),
 
         new GrammarRule("CONST", new String[] {"N_PLACEHOLDER"}),//"0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]"
@@ -55,7 +55,7 @@ public class Parser{
         new GrammarRule("OP", new String[] {"UNOP","(","ARG",")"}),
         new GrammarRule("OP", new String[] {"BINOP","(","ARG",",","ARG",")"}),
 
-        // new GrammarRule("ARG", new String[] {"ATOMIC"}),
+        new GrammarRule("ARG", new String[] {"ATOMIC"}),
         new GrammarRule("ARG", new String[] {"OP"}),
 
         new GrammarRule("COND", new String[] {"SIMPLE"}),
@@ -101,24 +101,14 @@ public class Parser{
 
     // private List<Token> input;
     private Stack<String> stack = new Stack<>();
+    private Stack<String> parseStack = new Stack<>();
     private int position = 0;
 
     private List<String> wordList = new ArrayList<>();
     private List<String> classList = new ArrayList<>();
+    private List<String> copiedWList = new ArrayList<>();
 
     public Parser(){
-    }
-
-    private void parseGLOBALVARS(){
-
-    }
-
-    private void parseINSTRUC(){
-
-    }
-
-    private void parseFUNCTIONS(){
-
     }
 
     public void xmlToToken(String fileName){
@@ -141,7 +131,8 @@ public class Parser{
                     String className = tokenElement.getElementsByTagName("CLASS").item(0).getTextContent();
                     String word = tokenElement.getElementsByTagName("WORD").item(0).getTextContent();
 
-                    wordList.add(word); 
+                    wordList.add(word);
+                    copiedWList.add(word); 
                     classList.add(className);
 
                 }
@@ -259,10 +250,439 @@ public class Parser{
         return token.matches("0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]");
     }
 
+    private void parsePROG(){
+        if(position < wordList.size()){
+            if(wordList.get(position).equals("main")){
+                position++;
+                parseGLOBVARS();
+                parseALGO();
+                parseFUNCTIONS();
+                parseStack.push("PROG");    
+            }
+            // System.out.println("Parsing successful");
+        }
+
+        if(!wordList.get(position).equals("}") /*|| !wordList.get(position).equals("end")*/){
+            System.out.println("Parsing Stack: "+parseStack);
+            System.out.println(wordList.get(position-1)+" at position: "+position);
+            System.out.println("Parsing failed");
+        }
+        else{
+
+            System.out.println("Parsing Successful");
+        }
+    }
+
+    private void parseGLOBVARS(){
+        if(position < wordList.size()){
+            if(wordList.get(position).equals("")){
+                // Nullable rule
+                return;
+            }
+            else{
+                parseVTYP();
+                parseVNAME();
+                // parseStack.push(", GLOBVARS");
+                if(wordList.get(position).equals(",")){
+                    position++;
+                    parseGLOBVARS(); // Recursive call
+                }
+            }
+        }
+    }
+
+    private void parseVTYP(){
+        if(position < wordList.size()){
+            if(wordList.get(position).equals("num") || wordList.get(position).equals("text")){
+                position++;
+                parseStack.push("VTYP");
+            }
+        }
+    }
+    
+    private void parseVNAME(){
+        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+            position++;
+            parseStack.push("VNAME");
+        }
+    }
+
+    private void parseALGO(){
+        if(position < wordList.size()){
+            if(wordList.get(position).equals("begin")){
+                position++;
+                parseINSTRUC();
+                if(wordList.get(position).equals("end")){
+                    position++;
+                }
+            }
+        }
+    }
+
+    private void parseINSTRUC(){
+        if(position < wordList.size()){
+            if(wordList.get(position).equals("")){
+                // Nullable rule
+
+                return;
+            }
+            else{
+                parseCOMMAND();
+                if(wordList.get(position).equals(";")){
+                    position++;
+                    parseINSTRUC(); // Recursive call
+                }
+            }
+        }
+    }
+
+    private void parseCOMMAND(){
+        if(position < wordList.size()){
+            if(wordList.get(position).equals("skip") || wordList.get(position).equals("halt")){
+                position++;
+            }
+            else if(wordList.get(position).equals("print")){
+                position++;
+                parseATOMIC();
+            }
+            else if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                parseASSIGN();
+            }
+            else if(wordList.get(position).matches("F_[a-z]([a-z]|[0-9])*")){
+                parseCALL();
+            }
+            else if(wordList.get(position).equals("if")){//LookAhead of COMMAND ::= BRANCH 
+                //NO position++ as we do that in the parseBRANCH() function
+                parseBRANCH();
+            }
+            else if(wordList.get(position).equals("return")){
+                position++;
+                parseATOMIC();
+            }
+        }
+    }
+
+    private void parseATOMIC(){
+        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*") || wordList.get(position).matches("\"[A-Z][a-z]{0,7}\"") || wordList.get(position).matches("0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]")){
+            position++;
+        }
+    }
+
+    private void parseASSIGN(){
+        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+            position++;
+            if(wordList.get(position).equals("<input")){
+                position++;
+            }
+            else if(wordList.get(position).equals("=")){
+                position++;
+                parseTERM();
+            }
+        }
+    }
+
+    private void parseCALL(){
+        if(wordList.get(position).matches("F_[a-z]([a-z]|[0-9])*")){
+            position++;
+            if(wordList.get(position).equals("(")){
+                position++;
+                parseATOMIC();
+                if(wordList.get(position).equals(",")){
+                    position++;
+                    parseATOMIC();
+                    if(wordList.get(position).equals(",")){
+                        position++;
+                        parseATOMIC();
+                        if(wordList.get(position).equals(")")){
+                            position++;
+                        }
+                    }
+                    else if(wordList.get(position).equals(")")){
+                        position++;
+                    }
+                }
+            }
+        }
+    }
+
+    private void parseBRANCH(){
+        if(wordList.get(position).equals("if")){
+            position++;
+            parseCOND();
+            if(wordList.get(position).equals("then")){
+                position++;
+                parseALGO();
+                if(wordList.get(position).equals("else")){
+                    position++;
+                    parseALGO();
+                }
+            }
+        }
+    }
+
+    private void parseTERM(){
+        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*") || wordList.get(position).matches("\"[A-Z][a-z]{0,7}\"") || wordList.get(position).matches("0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]")){
+            position++;
+        }
+        else if(wordList.get(position).matches("F_[a-z]([a-z]|[0-9])*")){
+            parseCALL();
+        }
+        else if(wordList.get(position).equals("not") || wordList.get(position).equals("sqrt") || wordList.get(position).equals("or") || wordList.get(position).equals("and") || wordList.get(position).equals("eq") || wordList.get(position).equals("grt") || wordList.get(position).equals("add") || wordList.get(position).equals("sub") || wordList.get(position).equals("mul") || wordList.get(position).equals("div")){
+            parseOP();
+        }
+    }
+
+    //COND ::= SIMPLE | COMPOSIT
+    private void parseCOND(){
+        if(wordList.get(position).equals("or") || wordList.get(position).equals("and") || wordList.get(position).equals("eq") || wordList.get(position).equals("grt") || wordList.get(position).equals("add") || wordList.get(position).equals("sub") || wordList.get(position).equals("mul") || wordList.get(position).equals("div")){
+            position++;
+            if(wordList.get(position).equals("(")){
+                position++;
+                //SIMPLE ::= BINOP ( ATOMIC , ATOMIC )
+                if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*") || wordList.get(position).matches("\"[A-Z][a-z]{0,7}\"") || wordList.get(position).matches("0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]")){
+                    position++;
+                    if(wordList.get(position).equals(",")){
+                        position++;
+                        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*") || wordList.get(position).matches("\"[A-Z][a-z]{0,7}\"") || wordList.get(position).matches("0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]")){
+                            position++;
+                            if(wordList.get(position).equals(")")){
+                                position++;
+                            }
+                        }
+                    }
+                }
+                //COMPOSIT ::= BINOP(SIMPLE, SIMPLE)
+                else if(wordList.get(position).equals("or") || wordList.get(position).equals("and") || wordList.get(position).equals("eq") || wordList.get(position).equals("grt") || wordList.get(position).equals("add") || wordList.get(position).equals("sub") || wordList.get(position).equals("mul") || wordList.get(position).equals("div")){
+                    position++;
+                    if(wordList.get(position).equals("(")){
+                        position++;
+                        parseSIMPLE();
+                        if(wordList.get(position).equals(",")){
+                            position++;
+                            parseSIMPLE();
+                            if(wordList.get(position).equals(")")){
+                                position++;
+                            }
+                        }
+                    }
+                }
+                //COMPOSIT ::= UNOP(SIMPLE)
+                else if(wordList.get(position).equals("not") || wordList.get(position).equals("sqrt")){
+                    position++;
+                    if(wordList.get(position).equals("(")){
+                        position++;
+                        parseSIMPLE();
+                        if(wordList.get(position).equals(")")){
+                            position++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void parseOP(){
+        if(wordList.get(position).equals("not") || wordList.get(position).equals("sqrt")){
+            position++;
+            if(wordList.get(position).equals("(")){
+                position++;
+                parseARG();
+                if(wordList.get(position).equals(")")){
+                    position++;
+                }
+            }
+        }
+        else if(wordList.get(position).equals("or") || wordList.get(position).equals("and") || wordList.get(position).equals("eq") || wordList.get(position).equals("grt") || wordList.get(position).equals("add") || wordList.get(position).equals("sub") || wordList.get(position).equals("mul") || wordList.get(position).equals("div")){
+            position++;
+            if(wordList.get(position).equals("(")){
+                position++;
+                parseARG();
+                if(wordList.get(position).equals(",")){
+                    position++;
+                    parseARG();
+                    if(wordList.get(position).equals(")")){
+                        position++;
+                    }
+                }
+            }
+        }
+    }
+
+    private void parseARG(){
+        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*") || wordList.get(position).matches("\"[A-Z][a-z]{0,7}\"")){
+            position++;
+        }
+        else if(wordList.get(position).equals("not") || wordList.get(position).equals("sqrt")){
+            parseOP();
+        }
+    }
+
+    private void parseSIMPLE(){
+        if(wordList.get(position).equals("or") || wordList.get(position).equals("and") || wordList.get(position).equals("eq") || wordList.get(position).equals("grt") || wordList.get(position).equals("add") || wordList.get(position).equals("sub") || wordList.get(position).equals("mul") || wordList.get(position).equals("div")){
+            position++;
+            if(wordList.get(position).equals("(")){
+                position++;
+                parseATOMIC();
+                if(wordList.get(position).equals(",")){
+                    position++;
+                    parseATOMIC();
+                    if(wordList.get(position).equals(")")){
+                        position++;
+                    }
+                }
+            }
+        }
+    }
+
+    // private void parseCOMPOSIT(){
+    //      if(wordList.get(position).equals("or") || wordList.get(position).equals("and") || wordList.get(position).equals("eq") || wordList.get(position).equals("grt") || wordList.get(position).equals("add") || wordList.get(position).equals("sub") || wordList.get(position).equals("mul") || wordList.get(position).equals("div")){
+    //         position++;
+    //         if(wordList.get(position).equals("(")){
+    //             position++;
+    //             parseSIMPLE();
+    //             if(wordList.get(position).equals(",")){
+    //                 position++;
+    //                 parseSIMPLE();
+    //                 if(wordList.get(position).equals(")")){
+    //                     position++;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     else if(wordList.get(position).equals("not") || wordList.get(position).equals("sqrt")){
+    //         position++;
+    //         if(wordList.get(position).equals("(")){
+    //             position++;
+    //             parseSIMPLE();
+    //             if(wordList.get(position).equals(")")){
+    //                 position++;
+    //             }
+    //         }
+    //     }
+    // }
+
+    private void parseFUNCTIONS(){
+        try {
+            if (position < wordList.size()) {
+                if (wordList.get(position).equals("")) {
+                    // Nullable rule
+                    return;
+                } else {
+                    // System.out.print("Befoer DECL At Position: "+position+" "+wordList.get(position));
+                    parseDECL();
+                    parseFUNCTIONS(); // Recursive call
+                }
+        }
+        } catch (StackOverflowError e) {
+            System.err.println("Error: "+e.getMessage());
+            return;
+        }
+    }
+
+    private void parseDECL() {
+        parseHEADER();
+        parseBODY();
+    }
+
+    private void parseHEADER(){
+        if(wordList.get(position).equals("num") || wordList.get(position).equals("void")){
+            position++;
+            if(wordList.get(position).matches("F_[a-z]([a-z]|[0-9])*")){
+                position++;
+                if(wordList.get(position).equals("(")){
+                    position++;
+                    if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                        position++;
+                        if(wordList.get(position).equals(",")){
+                            position++;
+                            if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                                position++;
+                                if(wordList.get(position).equals(",")){
+                                    position++;
+                                    if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                                        position++;
+                                        if(wordList.get(position).equals(")")){
+                                            position++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void parseBODY(){
+        if(wordList.get(position).equals("{")){
+            position++;
+            // parsePROLOG();
+            parseLOCVARS();
+            parseALGO();
+            // System.out.println("Position: "+position);
+            // parseEPILOG();
+            if(wordList.get(position).equals("}") || wordList.get(position).equals("end")){
+                if(position == wordList.size()-1){
+                    return;
+                }
+                else{
+                    System.out.println("Position: "+position);
+                    position++;
+                    parseSUBFUNCS();
+                }
+                // // position++;
+                // // parseSUBFUNCS();
+                // if(wordList.get(position).equals("end") || wordList.get(position).equals("}")){
+                //     // position++;
+                // }
+            }
+        }
+    }
+
+    private void parseLOCVARS(){
+        if(wordList.get(position).equals("num") || wordList.get(position).equals("text")){
+            position++;
+            if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                position++;
+                if(wordList.get(position).equals(",")){
+                    position++;
+                    if(wordList.get(position).equals("num") || wordList.get(position).equals("text")){
+                        position++;
+                        if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                            position++;
+                            if(wordList.get(position).equals(",")){
+                                position++;
+                                if(wordList.get(position).equals("num") || wordList.get(position).equals("text")){
+                                    position++;
+                                    if(wordList.get(position).matches("V_[a-z]([a-z]|[0-9])*")){
+                                        position++;
+                                        if(wordList.get(position).equals(",")){
+                                            position++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void parseSUBFUNCS(){
+        if (position < wordList.size()) {
+           parseFUNCTIONS(); 
+        }
+        else{
+        
+        }
+    }
 
     public static void main(String [] args){
         Parser parser = new Parser();
         parser.xmlToToken("output.xml");
-        parser.parse();
+        // parser.parse();
+        parser.parsePROG();
     }
 }
