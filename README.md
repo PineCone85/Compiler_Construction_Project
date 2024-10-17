@@ -1,2 +1,2 @@
 # Compiler_Construction_Project
-James Hardey and Alex Pretorius Compiler Construction Semester Project 2024
+James Hardy and Alex Pretorius Compiler Construction Semester Project 2024
