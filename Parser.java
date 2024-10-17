@@ -1,12 +1,14 @@
-
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import javax.xml.parsers.*;
 import org.w3c.dom.*;
+
+
 
 public class Parser{
 
@@ -679,10 +681,102 @@ public class Parser{
         }
     }
 
-    public static void main(String [] args){
+    private Map<Integer, Map<String, String>> actionTable = new HashMap<>();
+    private Map<Integer, Map<String, Integer>> gotoTable = new HashMap<>();
+    private Stack<String> symbolStack = new Stack<>();
+    private Stack<Integer> stateStack = new Stack<>();
+
+    public void loadParseTable(String filePath) throws IOException{
+        BufferedReader br = new BufferedReader(new FileReader(filePath));
+        String [] headers = br.readLine().split(",");
+
+        String line;
+        while((line = br.readLine()) != null){
+            String [] values = line.split(",");
+            System.out.println(Arrays.toString(values));
+            int state = Integer.parseInt(values[0]);
+
+            Map<String, String> actionrow = new HashMap<>();
+            Map<String, Integer> gotoRow = new HashMap<>();
+
+            for(int i = 1; i < values.length; i++){
+                String header = headers[i];
+                String value = values[i];
+                if(header.matches("[a-zA-Z]+")){
+                    if(!value.isEmpty() || !value.equals("")){
+                        actionrow.put(header, value);
+                    }
+                }
+                else{
+                    if(!value.isEmpty() || !value.equals("")){
+                        gotoRow.put(header, Integer.parseInt(value));
+                    }
+                }
+            }
+            actionTable.put(state, actionrow);
+            gotoTable.put(state, gotoRow);
+        }
+
+    }
+
+    public String getAction(int state, String token) {
+        return actionTable.getOrDefault(state, new HashMap<>()).get(token);
+    }
+
+    public Integer getGoto(int state, String nonTerminal) {
+        return gotoTable.getOrDefault(state, new HashMap<>()).get(nonTerminal);
+    }
+
+    public void parsePROG1() {
+        stateStack.push(0);
+
+        while (true) {
+            int state = stateStack.peek();
+            String token = wordList.get(position);
+            String action = getAction(state, token);
+
+            if (action == null) {
+                throw new RuntimeException("Syntax error at position " + position);
+            } else if (action.startsWith("s")) {
+                // Shift
+                int nextState = Integer.parseInt(action.substring(1));
+                stateStack.push(nextState);
+                symbolStack.push(token);
+                position++;
+            } else if (action.startsWith("r")) {
+                // Reduce
+                int ruleIndex = Integer.parseInt(action.substring(1)) - 1;
+                int ruleLength = rules.get(ruleIndex).getRight().length;
+                for (int i = 0; i < ruleLength; i++) {
+                    stateStack.pop();
+                    symbolStack.pop();
+                }
+                String lhs = rules.get(ruleIndex).getLeft();
+                symbolStack.push(lhs);
+                int gotoState = getGoto(stateStack.peek(), lhs);
+                stateStack.push(gotoState);
+            } else if (action.equals("acc")) {
+                System.out.println("Parsing successful!");
+                return;
+            }
+        }
+    }
+
+    private String match(String expected) {
+        if (position < wordList.size() && wordList.get(position).equals(expected)) {
+            return wordList.get(position++);
+        } else {
+            throw new RuntimeException("Expected '" + expected + "' at position " + position);
+        }
+    }
+
+    public static void main(String [] args) throws IOException{
         Parser parser = new Parser();
         parser.xmlToToken("output.xml");
+        parser.loadParseTable("/home/auut1/Compiler_Construction_Project/SLR Parse Table.csv");
         // parser.parse();
-        parser.parsePROG();
+        // parser.parsePROG();
+        parser.parsePROG1();
     }
 }
+

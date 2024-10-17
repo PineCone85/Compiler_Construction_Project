@@ -1,0 +1,19 @@
+main num V_x, num V_y, num V_z, 
+begin
+    V_x < input;
+    V_y = 20;
+    V_z = F_multiply(V_x, V_y);
+    print V_z;
+    halt;
+end
+
+num F_multiply(V_a, V_b, V_c)
+{
+    num V_result, 
+    begin
+        V_result = mul(V_a, V_b);
+        V_result = add(V_result, V_c);
+        print V_result;
+        return V_result;
+    end
+}
