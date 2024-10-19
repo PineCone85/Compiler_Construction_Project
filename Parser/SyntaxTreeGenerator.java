@@ -1,20 +1,28 @@
 import java.io.File;
 import java.util.*;
+import java.util.regex.Pattern;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 class Parser {
 
     // Tokens from the input
     private static List<String> tokens;
     private static int index = 0;
+
+    private static final Pattern V_NAMES_PATTERN = Pattern.compile("V_[a-z]([a-z]|[0-9])*");
+    private static final Pattern F_NAMES_PATTERN = Pattern.compile("F_[a-z]([a-z]|[0-9])*");
+    private static final Pattern TEXT_SNIPPET_PATTERN = Pattern.compile("\"[A-Z][a-z]{0,7}\"");
+    private static final Pattern N_NUMBERS_PATTERN = Pattern.compile(
+        "0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*|-?[1-9]([0-9])*.([0-9])*[1-9]"
+    );
 
     // A class representing the syntax tree node
     static class TreeNode {
@@ -36,17 +44,15 @@ class Parser {
         }
 
         // Method to create an XML structure, marking terminals as leaf nodes
-        void buildXML(Document doc, Element parentElement) {
-            Element nodeElement = doc.createElement("NODE");
+        void buildNonTerminalXML(Document doc, Element parentElement) {
+            Element nodeElement = doc.createElement("IN");
 
-            // Add PARENT UID
             if (parentElement != null) {
                 Element parentIdElement = doc.createElement("PARENT");
                 parentIdElement.appendChild(doc.createTextNode(String.valueOf(getParentUID(parentElement))));
                 nodeElement.appendChild(parentIdElement);
             }
 
-            // Add UNID and SYMB for each node
             Element unidElement = doc.createElement("UNID");
             unidElement.appendChild(doc.createTextNode(String.valueOf(unid)));
             nodeElement.appendChild(unidElement);
@@ -56,29 +62,92 @@ class Parser {
             nodeElement.appendChild(symbElement);
             
             // If the node is a terminal, mark it as a leaf node
-            if (isTerminal) {
-                Element terminalElement = doc.createElement("TERMINAL");
-                terminalElement.appendChild(doc.createTextNode(value));
-                nodeElement.appendChild(terminalElement);
-            } else {
-                // Add children nodes if it's a non-terminal
-                if (!children.isEmpty()) {
-                    Element childrenElement = doc.createElement("CHILDREN");
-                    for (TreeNode child : children) {
-                        Element childIdElement = doc.createElement("ID");
-                        childIdElement.appendChild(doc.createTextNode(String.valueOf(child.unid)));
-                        childrenElement.appendChild(childIdElement);
-                    }
-                    nodeElement.appendChild(childrenElement);
-                }
-            }
+            // if (isTerminal) {
+            //     Element terminalElement = doc.createElement("TERMINAL");
+            //     terminalElement.appendChild(doc.createTextNode(value));
+            //     nodeElement.appendChild(terminalElement);
+            // } else {
 
-            // Attach this node to the parent element
+                
+            if (!children.isEmpty()) {
+                Element childrenElement = doc.createElement("CHILDREN");
+                for (TreeNode child : children) {
+                    Element childIdElement = doc.createElement("ID");
+                    childIdElement.appendChild(doc.createTextNode(String.valueOf(child.unid)));
+                    childrenElement.appendChild(childIdElement);
+                }
+                nodeElement.appendChild(childrenElement);
+            }
+            // }
+
             parentElement.appendChild(nodeElement);
 
-            // Recursively build the XML structure for each child
             for (TreeNode child : children) {
-                child.buildXML(doc, nodeElement);
+                child.buildNonTerminalXML(doc, parentElement);
+            }
+        }
+
+        void buildRootXML(Document doc, Element pElement) {
+            Element rootElement = doc.createElement("ROOT");
+
+            Element uniElement = doc.createElement("UNID");
+            uniElement.appendChild(doc.createTextNode(String.valueOf(unid)));
+            rootElement.appendChild(uniElement);
+
+            Element SYMBOElement = doc.createElement("SYMB");
+            SYMBOElement.appendChild(doc.createTextNode(value));
+            rootElement.appendChild(SYMBOElement);
+
+            if(!children.isEmpty()){
+                Element childrenElement = doc.createElement("CHILDREN");
+                for (TreeNode child : children) {
+                    Element childIdElement = doc.createElement("ID");
+                    childIdElement.appendChild(doc.createTextNode(String.valueOf(child.unid)));
+                    childrenElement.appendChild(childIdElement);
+                }
+                rootElement.appendChild(childrenElement);
+            }
+            pElement.appendChild(rootElement);
+
+            Element innerNodes = doc.createElement("INNERNODES");
+
+            Element leafNodes = doc.createElement("LEAFNODES");
+
+            pElement.appendChild(innerNodes);
+            pElement.appendChild(leafNodes);
+
+            finalBuildXML(doc, innerNodes , leafNodes);
+        }
+
+        void buildLeafNodes(Document doc, Element pElement){
+            Element leaf = doc.createElement("LEAF");
+
+            Element parElement = doc.createElement("PARENT");
+            parElement.appendChild(doc.createTextNode(String.valueOf(getParentUID(pElement))));
+
+            Element unidElement = doc.createElement("UNID");
+            unidElement.appendChild(doc.createTextNode(String.valueOf(unid)));
+
+            Element terminalElement = doc.createElement("TERMINAL");
+            terminalElement.appendChild(doc.createTextNode(value));
+
+            leaf.appendChild(parElement);
+            leaf.appendChild(unidElement);
+            leaf.appendChild(terminalElement);
+
+            pElement.appendChild(leaf);
+        }
+
+        void finalBuildXML(Document doc, Element parentElement, Element leafElement){
+            if(isTerminal){
+                buildLeafNodes(doc, leafElement);
+            }
+            else{
+                buildNonTerminalXML(doc, parentElement);
+            }
+
+            for(TreeNode child : children){
+                child.finalBuildXML(doc, parentElement, leafElement);
             }
         }
 
@@ -91,6 +160,78 @@ class Parser {
                 }
             }
             return -1; // Return -1 if no parent UID is found
+        }
+
+        // private void findParent(Document doc) {
+        //     NodeList inNodes = doc.getElementsByTagName("IN");
+
+        //     for (int i = 0; i < inNodes.getLength(); i++) {
+        //         Element parentElement = (Element) inNodes.item(i);
+        //         int parentUID = getParentUID(parentElement);
+
+        //         NodeList children = parentElement.getElementsByTagName("CHILDREN");
+        //         if (children.getLength() > 0) {
+        //             NodeList childIDs = ((Element) children.item(0)).getElementsByTagName("ID");
+        //             for (int j = 0; j < childIDs.getLength(); j++) {
+        //                 String childID = childIDs.item(j).getTextContent();
+        //                 setParentUID(doc, Integer.parseInt(childID), parentUID);
+        //             }
+        //         }
+        //     }
+        // }
+
+        private void findParent(Document doc) {
+            NodeList inNodes = doc.getElementsByTagName("IN");
+
+            for (int i = 0; i < inNodes.getLength(); i++) {
+                Element parentElement = (Element) inNodes.item(i);
+                int parentUID = getParentUID(parentElement);
+
+                // Set parent UID for all child nodes
+                NodeList children = parentElement.getElementsByTagName("CHILDREN");
+                if (children.getLength() > 0) {
+                    NodeList childIDs = ((Element) children.item(0)).getElementsByTagName("ID");
+                    for (int j = 0; j < childIDs.getLength(); j++) {
+                        String childID = childIDs.item(j).getTextContent();
+                        setParentUID(doc, Integer.parseInt(childID), parentUID, false);
+                    }
+                }
+
+                // Also set parent UID for leaf nodes
+                NodeList leafNodes = parentElement.getElementsByTagName("LEAF");
+                if (leafNodes.getLength() > 0) {
+                    for (int j = 0; j < leafNodes.getLength(); j++) {
+                        Element leafElement = (Element) leafNodes.item(j);
+                        String leafID = leafElement.getElementsByTagName("ID").item(0).getTextContent();
+                        setParentUID(doc, Integer.parseInt(leafID), parentUID, true);
+                    }
+                }
+            }
+        }
+
+        private void setParentUID(Document doc, int childUID, int parentUID, boolean isLeaf) {
+            NodeList inNodes ;//= doc.getElementsByTagName("IN");
+            if(isLeaf == false){
+                inNodes = doc.getElementsByTagName("IN");
+            }
+            else{
+                inNodes = doc.getElementsByTagName("LEAF");
+            }
+            for (int i = 0; i < inNodes.getLength(); i++) {
+                Element childElement = (Element) inNodes.item(i);
+                int currentUID = Integer.parseInt(childElement.getElementsByTagName("UNID").item(0).getTextContent());
+                if (currentUID == childUID) {
+                    NodeList parentNodes = childElement.getElementsByTagName("PARENT");
+                    if (parentNodes.getLength() > 0) {
+                        parentNodes.item(0).setTextContent(String.valueOf(parentUID));
+                    } else {
+                        Element parentIDElement = doc.createElement("PARENT");
+                        parentIDElement.setTextContent(String.valueOf(parentUID));
+                        childElement.appendChild(parentIDElement);
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -120,6 +261,15 @@ class Parser {
         if (tokens.get(index).equals(expected)) {
             index++;
         } else {
+            throw new RuntimeException("Expected " + expected + " but found " + tokens.get(index));
+        }
+    }
+
+    static void matchRegex(String expected){
+        if(tokens.get(index).matches(expected)){
+            index++;
+        }
+        else{
             throw new RuntimeException("Expected " + expected + " but found " + tokens.get(index));
         }
     }
@@ -163,8 +313,10 @@ class Parser {
     // VNAME -> V
     static TreeNode parseVNAME() {
         TreeNode node = new TreeNode("VNAME", false);
-        match("V");
-        node.addChild(new TreeNode("V", true)); // Add terminal node
+        // match("V");
+        matchRegex(V_NAMES_PATTERN.toString());
+        // node.addChild(new TreeNode("N", true));
+        node.addChild(new TreeNode(tokens.get(index-1), true)); // Add terminal node
         return node;
     }
 
@@ -239,12 +391,18 @@ class Parser {
     // CONST -> N | T
     static TreeNode parseCONST() {
         TreeNode node = new TreeNode("CONST", false);
-        if (tokens.get(index).equals("N")) {
-            match("N");
-            node.addChild(new TreeNode("N", true)); // Terminal node
-        } else if (tokens.get(index).equals("T")) {
-            match("T");
-            node.addChild(new TreeNode("T", true)); // Terminal node
+        // if (tokens.get(index).equals("N")) {
+        if(tokens.get(index).matches(N_NUMBERS_PATTERN.toString())){
+            // match("N");
+            matchRegex(N_NUMBERS_PATTERN.toString());
+            // node.addChild(new TreeNode("N", true)); // Terminal node
+            node.addChild(new TreeNode(tokens.get(index-1), true)); // Terminal node
+        } //else if (tokens.get(index).equals("T")) {
+        else if(tokens.get(index).matches(TEXT_SNIPPET_PATTERN.toString())){
+            // match("T");
+            matchRegex(TEXT_SNIPPET_PATTERN.toString());
+            // node.addChild(new TreeNode("T", true)); // Terminal node
+            node.addChild(new TreeNode(tokens.get(index-1), true)); // Terminal node
         }
         return node;
     }
@@ -400,8 +558,10 @@ class Parser {
     // FNAME -> F
     static TreeNode parseFNAME() {
         TreeNode node = new TreeNode("FNAME", false);
-        match("F");
-        node.addChild(new TreeNode("F", true)); // Add terminal node
+        // match("F");
+        matchRegex(F_NAMES_PATTERN.toString());
+        // node.addChild(new TreeNode("F", true)); // Add terminal node
+        node.addChild(new TreeNode(tokens.get(index-1), true)); // Add terminal node
         return node;
     }
 
@@ -504,15 +664,18 @@ class Parser {
     }
 
     static boolean isVname() {
-        return tokens.get(index).equals("V");
+        // return tokens.get(index).equals("V");
+        return tokens.get(index).matches(V_NAMES_PATTERN.toString());
     }
 
     static boolean isFname() {
-        return tokens.get(index).equals("F");
+        // return tokens.get(index).equals("F");
+        return tokens.get(index).matches(F_NAMES_PATTERN.toString());
     }
 
     static boolean isConst() {
-        return tokens.get(index).equals("N") || tokens.get(index).equals("T");
+        // return tokens.get(index).equals("N") || tokens.get(index).equals("T");
+        return tokens.get(index).matches(N_NUMBERS_PATTERN.toString()) || tokens.get(index).matches(TEXT_SNIPPET_PATTERN.toString());
     }
 
     static boolean isCommand() {
@@ -543,7 +706,12 @@ class Parser {
             doc.appendChild(rootElement);
 
             // Build the XML structure from the tree
-            tree.buildXML(doc, rootElement);
+            // tree.buildXML(doc, rootElement);
+
+            tree.buildRootXML(doc, rootElement);
+
+            // tree.finalBuildXML(doc, rootElement);
+            tree.findParent(doc);
 
             // Write the content to an XML file
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
