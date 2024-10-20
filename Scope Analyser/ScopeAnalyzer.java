@@ -5,6 +5,7 @@ import java.util.ArrayList;           // For the ArrayList class used in the Nod
 import java.util.List;                // For the List interface used to manage children of nodes
 import java.util.HashMap;             // For the HashMap used to store the symbol table
 import java.util.Map;                 // For the Map interface used to define the symbol table
+import java.util.UUID;
 
 class ScopeAnalyzer {
 
@@ -29,7 +30,7 @@ class ScopeAnalyzer {
     private String currVarType = "";
     private String currVarName = "";
     private boolean isFuncCall = false;
-    boolean isSubFunction = false;
+    private boolean isSubFunction = false;
 
     // Class to represent a node in the syntax tree
     class Node {
@@ -98,8 +99,48 @@ class ScopeAnalyzer {
 
     private SymbolTable symbolTable = new SymbolTable(); // SymbolTable instance
 
+        // Class to represent an entry in the function symbol table
+        class FunctionSymbolEntry {
+            String functionID;
+            String functionName;
+            String[] parameters;  
+            Scope scope;
+    
+            FunctionSymbolEntry(String functionID, String functionName, String[] parameters, Scope scope) {
+                this.functionID = functionID;
+                this.functionName = functionName;
+                this.parameters = parameters;
+                this.scope = scope;
+            }
+        }
+    
+        // Class to represent the function symbol table
+        class FunctionSymbolTable {
+            private Map<String, FunctionSymbolEntry> functionTable = new HashMap<>();
+    
+            void addFunction(String functionName, String[] parameters, Scope scope) {
+                String functionID = UUID.randomUUID().toString();  // Generate unique identifier for the function
+                FunctionSymbolEntry entry = new FunctionSymbolEntry(functionID, functionName, parameters, scope);
+                functionTable.put(functionID, entry);
+                System.out.println("Added to Function Symbol Table: " + functionName + " with ID: " + functionID);
+            }
+    
+            void printFunctionTable() {
+                System.out.println("\nFunction Symbol Table Contents:");
+                for (Map.Entry<String, FunctionSymbolEntry> entry : functionTable.entrySet()) {
+                    FunctionSymbolEntry function = entry.getValue();
+                    System.out.println("Function ID: " + function.functionID + ", Name: " + function.functionName + ", Scope: " + function.scope.scopeName);
+                    System.out.print("Parameters: ");
+                    for (String param : function.parameters) {
+                        System.out.print(param + " ");
+                    }
+                    System.out.println();
+                }
+            }
+        }
 
 
+    private FunctionSymbolTable functionTable = new FunctionSymbolTable(); // Function symbol table instance
 
     public void depthFirstTraversal(Node node) {
         if (node == null) return;
@@ -132,6 +173,9 @@ class ScopeAnalyzer {
                 if (!currVarType.isEmpty()) {
                     boolean isDuplicate = false;
 
+                    // Create a unique key combining the variable name and scope name
+                    String varKey = currVarName + "@" + currentScope.scopeName;
+
                     // Check for duplicate declarations in the same scope
                     for (SymbolEntry entry : symbolTable.symbolTable.values()) {
                         if (entry.name.equals(currVarName) && entry.scope == currentScope) {
@@ -143,7 +187,7 @@ class ScopeAnalyzer {
                     if (isDuplicate) {
                         System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
                     } else {
-                        symbolTable.addEntry("VNAME", currVarName, currVarType, currentScope);
+                        symbolTable.addEntry("VNAME", varKey, currVarType, currentScope); // Use varKey for unique entries
                     }
                     currVarType = "";
                     currVarName = "";
@@ -155,15 +199,16 @@ class ScopeAnalyzer {
 
                     // Traverse through the current and parent scopes to find the variable
                     while (scopeToCheck != null) {
+                        String varKey = currVarName + "@" + scopeToCheck.scopeName;
                         for (SymbolEntry entry : symbolTable.symbolTable.values()) {
-                            if (entry.name.equals(currVarName) && entry.entryType.equals("VNAME") && entry.scope == scopeToCheck) {
+                            if (entry.name.equals(varKey) && entry.entryType.equals("VNAME") && entry.scope == scopeToCheck) {
                                 System.out.println("Variable '" + currVarName + "' found in scope: " + scopeToCheck.scopeName);
                                 isDeclared = true;
                                 break;
                             }
                         }
-                        if (isDeclared) break;  // Exit the loop if the variable is found
-                        scopeToCheck = scopeToCheck.parentScope;  // Move up to the parent scope
+                        if (isDeclared) break;  
+                        scopeToCheck = scopeToCheck.parentScope;  
                     }
 
                     if (!isDeclared) {
@@ -204,7 +249,7 @@ class ScopeAnalyzer {
                     System.err.println("Error: CALL is not referring to function in immediate scope or child scope.");
                 }
 
-                isFuncCall = false;  // Reset after handling the function call
+                isFuncCall = false;  
 
             } else {
                 System.out.println("Function declaration detected: " + functionName);
@@ -225,14 +270,27 @@ class ScopeAnalyzer {
                     } else {
                         // If this is not a subfunction, reset the current scope to "main"
                         if (!isSubFunction) {
-                            currentScope = mainScope;  // Reset to main scope
+                            currentScope = mainScope;
+                            Scope newFunctionScope = new Scope(functionName, currentScope);
+                            currentScope.addChildScope(newFunctionScope);
+                            System.out.println("New function scope opened: " + functionName);
+                            currentScope = newFunctionScope;
+
+                            // Add the function to the function symbol table
+                            String[] parameters = {"num","num","num"}; // Modify to retrieve actual parameters
+                            functionTable.addFunction(functionName, parameters, currentScope);
+
                         }else{
-                             // Create a new function scope and set it as the current scope
+                            // Create a new function scope and set it as the current scope
                             Scope newFunctionScope = new Scope(functionName, currentScope);
                             currentScope.addChildScope(newFunctionScope);
                             System.out.println("New function scope opened: " + functionName);
                             currentScope = newFunctionScope;
                             isSubFunction = false;
+
+                            // Add the function to the function symbol table
+                            String[] parameters = {"num","num","num"}; // Modify to retrieve actual parameters
+                            functionTable.addFunction(functionName, parameters, currentScope);
                         }
                     }
                 }
@@ -243,9 +301,13 @@ class ScopeAnalyzer {
         for (Node child : node.children) {
             depthFirstTraversal(child);
         }
-
     }
-   
+
+    // Function to print both symbol tables after traversal
+    public void printAllTables() {
+        symbolTable.printSymbolTable();
+        functionTable.printFunctionTable();
+    }
     
     
 
@@ -337,7 +399,7 @@ class ScopeAnalyzer {
 
         // Perform a depth-first traversal
         analyzer.depthFirstTraversal(root);
-        analyzer.symbolTable.printSymbolTable();
+        analyzer.printAllTables();
     }
 }
 
