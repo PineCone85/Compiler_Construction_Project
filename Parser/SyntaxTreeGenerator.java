@@ -18,14 +18,14 @@ class Parser {
 
     // A class representing the syntax tree node
     static class TreeNode {
-        static int nodeCounter = 0; // Counter to assign unique IDs to nodes
-        int unid; // Unique Node ID
-        String value; // The symbol for the node
-        List<TreeNode> children; // List of child nodes
-        boolean isTerminal; // Marks if the node is a terminal (leaf)
+        static int nodeCounter = 0;
+        int unid;
+        String value;
+        List<TreeNode> children;
+        boolean isTerminal;
 
         TreeNode(String value, boolean isTerminal) {
-            this.unid = nodeCounter++; // Assign a unique ID to this node
+            this.unid = nodeCounter++;
             this.value = value;
             this.isTerminal = isTerminal;
             this.children = new ArrayList<>();
@@ -36,11 +36,19 @@ class Parser {
         }
 
         // Method to create an XML structure, marking terminals as leaf nodes
-        void buildXML(Document doc, Element parentElement) {
-            Element nodeElement = doc.createElement("NODE");
+        void buildXML(Document doc, Element parentElement, boolean isRoot) {
+            Element nodeElement;
+
+            if (isRoot) {
+                // For the root node, create a <ROOT> element
+                nodeElement = doc.createElement("ROOT");
+            } else {
+                // For non-root nodes, create a <NODE> element
+                nodeElement = doc.createElement("NODE");
+            }
 
             // Add PARENT UID
-            if (parentElement != null) {
+            if (parentElement != null && !isRoot) {
                 Element parentIdElement = doc.createElement("PARENT");
                 parentIdElement.appendChild(doc.createTextNode(String.valueOf(getParentUID(parentElement))));
                 nodeElement.appendChild(parentIdElement);
@@ -50,11 +58,11 @@ class Parser {
             Element unidElement = doc.createElement("UNID");
             unidElement.appendChild(doc.createTextNode(String.valueOf(unid)));
             nodeElement.appendChild(unidElement);
-            
+
             Element symbElement = doc.createElement("SYMB");
             symbElement.appendChild(doc.createTextNode(value));
             nodeElement.appendChild(symbElement);
-            
+
             // If the node is a terminal, mark it as a leaf node
             if (isTerminal) {
                 Element terminalElement = doc.createElement("TERMINAL");
@@ -78,7 +86,7 @@ class Parser {
 
             // Recursively build the XML structure for each child
             for (TreeNode child : children) {
-                child.buildXML(doc, nodeElement);
+                child.buildXML(doc, nodeElement, false);
             }
         }
 
@@ -93,36 +101,21 @@ class Parser {
             return -1; // Return -1 if no parent UID is found
         }
     }
-
-    public static void main(String[] args) {
-        // Read input from the user
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter your input:");
-        String input = scanner.nextLine();
-        
-        // Tokenize the input string
-        tokens = tokenize(input);
-
-        // Parse the tokens and generate the syntax tree
-        TreeNode syntaxTree = parsePROG();
-
-        // Save the tree as an XML file
-        saveTreeToXML(syntaxTree, "syntax_tree.xml");
-    }
-
     // Method to tokenize the input string
     static List<String> tokenize(String input) {
         return Arrays.asList(input.split("\\s+"));
     }
 
-    // Match the current token with an expected token
+    // Modify match to check for bounds
     static void match(String expected) {
-        if (tokens.get(index).equals(expected)) {
-            index++;
+        if (index < tokens.size() && tokens.get(index).equals(expected)) {
+            index++;  // Increment index after a successful match
         } else {
-            throw new RuntimeException("Expected " + expected + " but found " + tokens.get(index));
+            throw new RuntimeException("Expected " + expected + " but found " + 
+                (index < tokens.size() ? tokens.get(index) : "end of input"));
         }
     }
+
 
     // PROG -> main GLOBVARS ALGO FUNCTIONS
     static TreeNode parsePROG() {
@@ -135,39 +128,45 @@ class Parser {
         return node;
     }
 
-    // GLOBVARS -> '' | VTYP VNAME , GLOBVARS
+
     static TreeNode parseGLOBVARS() {
         TreeNode node = new TreeNode("GLOBVARS", false);
         if (isVtyp()) {
             node.addChild(parseVTYP());
             node.addChild(parseVNAME());
-            match(",");
+            match(","); // Match and consume ','
+            node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
             node.addChild(parseGLOBVARS());
         }
         return node;
     }
 
-    // VTYP -> num | text
+
+
     static TreeNode parseVTYP() {
-        TreeNode node = new TreeNode("VTYP", false);
+        TreeNode node = new TreeNode("VTYP", false);  // Create a non-terminal node for VTYP
         if (tokens.get(index).equals("num")) {
-            match("num");
-            node.addChild(new TreeNode("num", true)); // Add terminal node
+            match("num");  // Match 'num'
+            node.addChild(new TreeNode("num", true));  // Add 'num' as a terminal node under VTYP
         } else if (tokens.get(index).equals("text")) {
-            match("text");
-            node.addChild(new TreeNode("text", true)); // Add terminal node
+            match("text");  // Match 'text'
+            node.addChild(new TreeNode("text", true));  // Add 'text' as a terminal node under VTYP
         }
-        return node;
+        return node;  // Return the VTYP node with either 'num' or 'text' as its child
     }
 
     // VNAME -> V
     static TreeNode parseVNAME() {
         TreeNode node = new TreeNode("VNAME", false);
-        match("V");
-        node.addChild(new TreeNode("V", true)); // Add terminal node
+        if (isVname()) {
+            String vname = tokens.get(index);  // get the current token as a variable name
+            match(vname);  // match the variable name
+            node.addChild(new TreeNode(vname, true)); // Add terminal node with actual variable name
+        } else {
+            throw new RuntimeException("Expected variable name but found " + tokens.get(index));
+        }
         return node;
     }
-
     // ALGO -> begin INSTRUC end
     static TreeNode parseALGO() {
         TreeNode node = new TreeNode("ALGO", false);
@@ -179,16 +178,29 @@ class Parser {
         return node;
     }
 
-    // INSTRUC -> '' | COMMAND ; INSTRUC
     static TreeNode parseINSTRUC() {
         TreeNode node = new TreeNode("INSTRUC", false);
-        if (isCommand()) {
+    
+        // If we hit "end" or have no tokens left, return an empty INSTRUC node
+        if (index >= tokens.size() || tokens.get(index).equals("end")) {
+            return node;  // Return empty node, indicating nullable INSTRUC
+        }
+    
+        // Otherwise, parse instructions as usual
+        if (isCommand()) {  // Ensure that the next token is a valid command
             node.addChild(parseCOMMAND());
-            match(";");
-            node.addChild(parseINSTRUC());
+            match(";");  // Match and consume ';'
+            node.addChild(new TreeNode(";", true));  // Add ';' as a terminal node
+    
+            // Recursively check for more instructions until we reach "end"
+            if (index < tokens.size() && !tokens.get(index).equals("end")) {
+                node.addChild(parseINSTRUC());
+            }
         }
         return node;
     }
+    
+
 
     // COMMAND -> skip | halt | print ATOMIC | ASSIGN | CALL | BRANCH | return ATOMIC
     static TreeNode parseCOMMAND() {
@@ -239,17 +251,20 @@ class Parser {
     // CONST -> N | T
     static TreeNode parseCONST() {
         TreeNode node = new TreeNode("CONST", false);
-        if (tokens.get(index).equals("N")) {
-            match("N");
-            node.addChild(new TreeNode("N", true)); // Terminal node
-        } else if (tokens.get(index).equals("T")) {
-            match("T");
-            node.addChild(new TreeNode("T", true)); // Terminal node
+        if (isNumber()) {
+            String num = tokens.get(index); // Capture the number
+            match(num); // Match the number constant
+            node.addChild(new TreeNode(num, true)); // Terminal node with the actual number
+        } else if (isStringConst()) {
+            String str = tokens.get(index); // Capture the string
+            match(str); // Match the string constant
+            node.addChild(new TreeNode(str, true)); // Terminal node with the actual string
+        } else {
+            throw new RuntimeException("Expected constant but found " + tokens.get(index));
         }
         return node;
     }
 
-    // ASSIGN -> VNAME < input | VNAME = TERM
     static TreeNode parseASSIGN() {
         TreeNode node = new TreeNode("ASSIGN", false);
         node.addChild(parseVNAME());
@@ -258,8 +273,9 @@ class Parser {
             match("input");
             node.addChild(new TreeNode("< input", true)); // Terminal node
         } else {
-            match("=");
-            node.addChild(parseTERM());
+            match("="); // Match and consume '='
+            node.addChild(new TreeNode("=", true)); // Add '=' as a terminal node
+            node.addChild(parseTERM()); // Handle the constant in TERM
         }
         return node;
     }
@@ -268,13 +284,17 @@ class Parser {
     static TreeNode parseCALL() {
         TreeNode node = new TreeNode("CALL", false);
         node.addChild(parseFNAME());
-        match("(");
+        match("("); // Match and consume '('
+        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
         node.addChild(parseATOMIC());
-        match(",");
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
         node.addChild(parseATOMIC());
-        match(",");
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
         node.addChild(parseATOMIC());
-        match(")");
+        match(")"); // Match and consume ')'
+        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
         return node;
     }
 
@@ -303,24 +323,21 @@ class Parser {
         return node;
     }
 
-    // OP -> UNOP ( ARG ) | BINOP ( ARG , ARG )
+    // OP -> BINOP ( ARG , ARG )
     static TreeNode parseOP() {
         TreeNode node = new TreeNode("OP", false);
-        if (isUnop()) {
-            node.addChild(parseUNOP());
-            match("(");
-            node.addChild(parseARG());
-            match(")");
-        } else {
-            node.addChild(parseBINOP());
-            match("(");
-            node.addChild(parseARG());
-            match(",");
-            node.addChild(parseARG());
-            match(")");
-        }
+        node.addChild(parseBINOP());
+        match("("); // Match and consume '('
+        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
+        node.addChild(parseARG());
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
+        node.addChild(parseARG());
+        match(")"); // Match and consume ')'
+        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
         return node;
     }
+
 
     // ARG -> ATOMIC | OP
     static TreeNode parseARG() {
@@ -348,32 +365,32 @@ class Parser {
     static TreeNode parseSIMPLE() {
         TreeNode node = new TreeNode("SIMPLE", false);
         node.addChild(parseBINOP());
-        match("(");
+        match("("); // Match and consume '('
+        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
         node.addChild(parseATOMIC());
-        match(",");
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
         node.addChild(parseATOMIC());
-        match(")");
+        match(")"); // Match and consume ')'
+        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
         return node;
     }
 
-    // COMPOSIT -> BINOP ( SIMPLE , SIMPLE ) | UNOP ( SIMPLE )
+
     static TreeNode parseCOMPOSIT() {
         TreeNode node = new TreeNode("COMPOSIT", false);
-        if (isUnop()) {
-            node.addChild(parseUNOP());
-            match("(");
-            node.addChild(parseSIMPLE());
-            match(")");
-        } else {
-            node.addChild(parseBINOP());
-            match("(");
-            node.addChild(parseSIMPLE());
-            match(",");
-            node.addChild(parseSIMPLE());
-            match(")");
-        }
+        node.addChild(parseBINOP());
+        match("("); // Match and consume '('
+        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
+        node.addChild(parseSIMPLE());
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
+        node.addChild(parseSIMPLE());
+        match(")"); // Match and consume ')'
+        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
         return node;
     }
+
 
     // UNOP -> not | sqrt
     static TreeNode parseUNOP() {
@@ -397,13 +414,18 @@ class Parser {
         return node;
     }
 
-    // FNAME -> F
     static TreeNode parseFNAME() {
         TreeNode node = new TreeNode("FNAME", false);
-        match("F");
-        node.addChild(new TreeNode("F", true)); // Add terminal node
+        String fname = tokens.get(index);  // get the full function name
+        if (isFname()) {
+            match(fname);  // match the full function name
+            node.addChild(new TreeNode(fname, true)); // Add terminal node with the actual function name
+        } else {
+            throw new RuntimeException("Expected function name but found " + tokens.get(index));
+        }
         return node;
     }
+    
 
     // FUNCTIONS -> '' | DECL FUNCTIONS
     static TreeNode parseFUNCTIONS() {
@@ -428,15 +450,20 @@ class Parser {
         TreeNode node = new TreeNode("HEADER", false);
         node.addChild(parseFTYP());
         node.addChild(parseFNAME());
-        match("(");
+        match("("); // Match and consume '('
+        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
         node.addChild(parseVNAME());
-        match(",");
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
         node.addChild(parseVNAME());
-        match(",");
+        match(","); // Match and consume ','
+        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
         node.addChild(parseVNAME());
-        match(")");
+        match(")"); // Match and consume ')'
+        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
         return node;
     }
+
 
     // FTYP -> num | void
     static TreeNode parseFTYP() {
@@ -451,7 +478,6 @@ class Parser {
         return node;
     }
 
-    // BODY -> PROLOG LOCVARS ALGO EPILOG SUBFUNCS end
     static TreeNode parseBODY() {
         TreeNode node = new TreeNode("BODY", false);
         node.addChild(parsePROLOG());
@@ -459,11 +485,17 @@ class Parser {
         node.addChild(parseALGO());
         node.addChild(parseEPILOG());
         node.addChild(parseSUBFUNCS());
-        match("end");
-        node.addChild(new TreeNode("end", true)); // Add terminal node
+        
+        if (index < tokens.size()) {  // Check if 'end' token is still available
+            match("end");
+            node.addChild(new TreeNode("end", true)); // Add terminal node
+        } else {
+            throw new RuntimeException("Expected 'end' but reached end of input.");
+        }
+    
         return node;
     }
-
+    
     // PROLOG -> {
     static TreeNode parsePROLOG() {
         TreeNode node = new TreeNode("PROLOG", false);
@@ -486,7 +518,8 @@ class Parser {
         for (int i = 0; i < 3; i++) {
             node.addChild(parseVTYP());
             node.addChild(parseVNAME());
-            match(",");
+            match(","); // Match and consume ','
+            node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
         }
         return node;
     }
@@ -504,15 +537,26 @@ class Parser {
     }
 
     static boolean isVname() {
-        return tokens.get(index).equals("V");
+        return tokens.get(index).matches("[a-zA-Z_][a-zA-Z0-9_]*"); // allows variable names like V_gamer
     }
 
     static boolean isFname() {
-        return tokens.get(index).equals("F");
+        return tokens.get(index).matches("F_[a-zA-Z_][a-zA-Z0-9_]*");
+    }
+    
+    
+    static boolean isConst() {
+        return isNumber() || isStringConst(); 
     }
 
-    static boolean isConst() {
-        return tokens.get(index).equals("N") || tokens.get(index).equals("T");
+    // Helper
+    static boolean isNumber() {
+        return tokens.get(index).matches("\\d+"); // Match numeric constants like 5, 123, etc.
+    }
+
+    // Helper method to check if a token matches the string constant format
+    static boolean isStringConst() {
+        return tokens.get(index).matches("[A-Z][a-z]{0,7}"); // Match string constants based on your regex
     }
 
     static boolean isCommand() {
@@ -543,7 +587,7 @@ class Parser {
             doc.appendChild(rootElement);
 
             // Build the XML structure from the tree
-            tree.buildXML(doc, rootElement);
+            tree.buildXML(doc, rootElement, true); // Pass 'true' to indicate root node
 
             // Write the content to an XML file
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
@@ -561,4 +605,23 @@ class Parser {
             e.printStackTrace();
         }
     }
+
+    
+    public static void main(String[] args) {
+        // Read input from the user
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter your input:");
+        String input = scanner.nextLine();
+
+        // Tokenize the input string
+        tokens = tokenize(input);
+
+        // Parse the tokens and generate the syntax tree
+        TreeNode syntaxTree = parsePROG();
+
+        // Save the tree as an XML file
+        saveTreeToXML(syntaxTree, "syntax_tree.xml");
+    }
+    
+
 }
