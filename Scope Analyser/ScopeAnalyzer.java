@@ -164,8 +164,10 @@ class ScopeAnalyzer {
 
                     String varKey = currVarName + "@" + currentScope.scopeName;
 
+
                     for (SymbolEntry entry : symbolTable.symbolTable.values()) {
-                        if (entry.name.equals(currVarName) && entry.scope == currentScope) {
+                        if (entry.name.equals(varKey) && entry.scope == currentScope) {
+                            
                             isDuplicate = true;
                             break;
                         }
