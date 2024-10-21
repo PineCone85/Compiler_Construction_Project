@@ -32,6 +32,8 @@ class ScopeAnalyzer {
     private String currVarName = "";
     private boolean isFuncCall = false;
     private boolean isSubFunction = false;
+    private boolean isFuncParameters = false;
+    private int declarationCounter = 0;
     private Map<String, String> functionCalls = new HashMap<>();
 
     class Node {
@@ -147,6 +149,8 @@ class ScopeAnalyzer {
             isSubFunction = true;  
         }
 
+
+
         if (node.symb.equals("VTYP")) {
             if (!node.children.isEmpty()) {
                 currVarType = node.children.get(0).symb;
@@ -159,7 +163,30 @@ class ScopeAnalyzer {
                 currVarName = node.children.get(0).symb;
                 System.out.println("Variable Name found: " + currVarName);
 
-                if (!currVarType.isEmpty()) {
+                if(declarationCounter >= 3){
+                    isFuncParameters = false;
+                }
+
+                if(isFuncParameters){
+                    boolean isDuplicate = false;
+
+                    String varKey = currVarName + "@" + currentScope.scopeName;
+
+                    for (SymbolEntry entry : symbolTable.symbolTable.values()) {
+                        if (entry.name.equals(varKey) && entry.scope == currentScope) {
+                            
+                            isDuplicate = true;
+                            break;
+                        }
+                    }
+
+                    if (isDuplicate) {
+                        System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
+                    } else {
+                        symbolTable.addEntry("VNAME", varKey, "num", currentScope);
+                    }
+                    declarationCounter++;
+                }else if (!currVarType.isEmpty()) {
                     boolean isDuplicate = false;
 
                     String varKey = currVarName + "@" + currentScope.scopeName;
@@ -217,7 +244,7 @@ class ScopeAnalyzer {
                 isFuncCall = false;
             } else {
                 System.out.println("Function declaration detected: " + functionName);
-
+                isFuncParameters = true;
                 if (functionName.equals(currentScope.scopeName)) {
                     System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
                 } else {
@@ -385,8 +412,6 @@ class ScopeAnalyzer {
             root.printNode("");
         }
     }
-
-    // Main function to test the parsing and symbol table generation
     public static void main(String[] args) {
         ScopeAnalyzer analyzer = new ScopeAnalyzer();
         String filePath = "syntax_tree.xml";

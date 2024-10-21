@@ -587,10 +587,10 @@ class Parser {
         return tokens.get(index).matches("\\d+"); // Match numeric constants like 5, 123, etc.
     }
 
-    // Helper method to check if a token matches the string constant format
     static boolean isStringConst() {
-        return tokens.get(index).matches("[A-Z][a-z]{0,7}"); // Match string constants based on your regex
+        return tokens.get(index).matches("\"[A-Za-z ]+\""); // Handle strings in double quotes
     }
+    
 
     static boolean isCommand() {
         return tokens.get(index).equals("skip") || tokens.get(index).equals("halt") || tokens.get(index).equals("print") || tokens.get(index).equals("return") || isVname() || isFname() || tokens.get(index).equals("if");
@@ -657,5 +657,6 @@ class Parser {
     }
     // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = not ( 5 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
     //main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = and ( 5 , 5 ) ; F_function1 ( 5 , 5 , 900 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
+    //main num V_count , text V_message , begin V_count = 5 ; V_message = "Hello" ; if grt ( V_count , 0 ) then begin print V_message ; V_count = sub ( V_count , 1 ) ; end else begin halt ; end ; F_factorial ( V_count , 1 , V_message ) ; end num F_factorial ( V_n , V_result , V_msg ) { num V_temp , num V_fun , text V_resultmsg , begin if eq ( V_n , 0 ) then begin V_resultmsg = "Factor" ; print V_resultmsg ; print V_result ; return V_result ; end else begin V_temp = mul ( V_n , V_result ) ; V_n = sub ( V_n , 1 ) ; V_fun = F_factorial ( V_n , V_temp , V_msg ) ; return V_fun ; end ; end } end
     // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = 5 ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
 }

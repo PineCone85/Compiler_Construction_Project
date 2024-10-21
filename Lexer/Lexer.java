@@ -34,7 +34,8 @@ public class Lexer {
         reservedKeywords.put("sqrt", TokenType.SQRT);
         reservedKeywords.put("or", TokenType.OR);
         reservedKeywords.put("and", TokenType.AND);
-        reservedKeywords.put("=", TokenType.EQ);
+        reservedKeywords.put("=", TokenType.EQUAL);
+        reservedKeywords.put("eq", TokenType.EQ);
         reservedKeywords.put("grt", TokenType.GRT);
         reservedKeywords.put("add", TokenType.ADD);
         reservedKeywords.put("sub", TokenType.SUB);
