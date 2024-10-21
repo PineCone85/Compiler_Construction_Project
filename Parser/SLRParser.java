@@ -245,11 +245,10 @@ public void parseInput(String input) {
         return inputString.toString().trim();
     }
     
-    
 
     public static void main(String[] args) {
         SLRParser parser = new SLRParser();
-        parser.loadParseTable("P7.csv");
+        parser.loadParseTable("p8.csv");
         String xmlFilePath = "output.xml";
         String input = parser.parseXMLFile(xmlFilePath);
         parser.parseInput(input);
