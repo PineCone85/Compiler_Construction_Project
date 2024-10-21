@@ -395,18 +395,33 @@ class Parser {
 
     static TreeNode parseCOMPOSIT() {
         TreeNode node = new TreeNode("COMPOSIT", false);
-        node.addChild(parseBINOP());
-        match("("); // Match and consume '('
-        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
-        node.addChild(parseSIMPLE());
-        match(","); // Match and consume ','
-        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
-        node.addChild(parseSIMPLE());
-        match(")"); // Match and consume ')'
-        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
+    
+        if (isUnop()) {
+            // Handle unary operation (e.g., not, sqrt)
+            node.addChild(parseUNOP());
+            match("("); // Match and consume '('
+            node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
+            node.addChild(parseSIMPLE());           // COMPOSIT can have SIMPLE as the argument to UNOP
+            match(")");
+            node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
+        } else if (isBinop()) {
+            // Handle binary operation
+            node.addChild(parseBINOP());
+            match("("); // Match and consume '('
+            node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
+            node.addChild(parseSIMPLE());           // First SIMPLE argument
+            match(",");                             // Match and consume ','
+            node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
+            node.addChild(parseSIMPLE());           // Second SIMPLE argument
+            match(")");                             // Match and consume ')'
+            node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
+        } else {
+            throw new RuntimeException("Expected unary or binary operation but found " + tokens.get(index));
+        }
+    
         return node;
     }
-
+    
 
     static TreeNode parseUNOP() {
         TreeNode node = new TreeNode("UNOP", false);
