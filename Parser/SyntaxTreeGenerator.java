@@ -279,6 +279,8 @@ class Parser {
         }
         return node;
     }
+    
+    
 
     // CALL -> FNAME ( ATOMIC , ATOMIC , ATOMIC )
     static TreeNode parseCALL() {
@@ -323,20 +325,34 @@ class Parser {
         return node;
     }
 
-    // OP -> BINOP ( ARG , ARG )
+
     static TreeNode parseOP() {
         TreeNode node = new TreeNode("OP", false);
-        node.addChild(parseBINOP());
-        match("("); // Match and consume '('
-        node.addChild(new TreeNode("(", true)); // Add '(' as a terminal node
-        node.addChild(parseARG());
-        match(","); // Match and consume ','
-        node.addChild(new TreeNode(",", true)); // Add ',' as a terminal node
-        node.addChild(parseARG());
-        match(")"); // Match and consume ')'
-        node.addChild(new TreeNode(")", true)); // Add ')' as a terminal node
+    
+        // Check if it's a unary operation first (like 'not' or 'sqrt')
+        if (isUnop()) {
+            node.addChild(parseUNOP());
+            match("("); // Match and consume '('
+            node.addChild(new TreeNode("(", true));
+            node.addChild(parseARG()); // Unary operation only has one argument
+            match(")"); // Match and consume ')'
+            node.addChild(new TreeNode(")", true));
+        }
+        // Otherwise, it must be a binary operation (like 'add', 'sub', etc.)
+        else if (isBinop()) {
+            node.addChild(parseBINOP());
+            match("("); // Match and consume '('
+            node.addChild(new TreeNode("(", true));
+            node.addChild(parseARG()); // First argument
+            match(","); // Match and consume ','
+            node.addChild(new TreeNode(",", true));
+            node.addChild(parseARG()); // Second argument
+            match(")"); // Match and consume ')'
+            node.addChild(new TreeNode(")", true));
+        }
         return node;
     }
+    
 
 
     // ARG -> ATOMIC | OP
@@ -392,18 +408,19 @@ class Parser {
     }
 
 
-    // UNOP -> not | sqrt
     static TreeNode parseUNOP() {
         TreeNode node = new TreeNode("UNOP", false);
-        if (tokens.get(index).equals("not")) {
-            match("not");
-            node.addChild(new TreeNode("not", true)); // Terminal node
+        String op = tokens.get(index); // 'not' or 'sqrt'
+        if (op.equals("not") || op.equals("sqrt")) {
+            match(op);
+            node.addChild(new TreeNode(op, true)); // Terminal node for the operator
         } else {
-            match("sqrt");
-            node.addChild(new TreeNode("sqrt", true)); // Terminal node
+            throw new RuntimeException("Expected unary operator but found " + op);
         }
         return node;
     }
+    
+    
 
     // BINOP -> or | and | eq | grt | add | sub | mul | div
     static TreeNode parseBINOP() {
@@ -537,8 +554,9 @@ class Parser {
     }
 
     static boolean isVname() {
-        return tokens.get(index).matches("[a-zA-Z_][a-zA-Z0-9_]*"); // allows variable names like V_gamer
+        return tokens.get(index).matches("V_[a-zA-Z0-9_]*"); // Variable names must start with V_
     }
+    
 
     static boolean isFname() {
         return tokens.get(index).matches("F_[a-zA-Z_][a-zA-Z0-9_]*");
@@ -622,6 +640,7 @@ class Parser {
         // Save the tree as an XML file
         saveTreeToXML(syntaxTree, "syntax_tree.xml");
     }
-    
-
+    // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = not ( 5 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
+    //main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = and ( 5 , 5 ) ; F_function1 ( 5 , 5 , 900 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
+    // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = 5 ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
 }

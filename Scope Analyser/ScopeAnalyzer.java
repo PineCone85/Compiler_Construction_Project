@@ -25,12 +25,15 @@ class ScopeAnalyzer {
             this.childScopes.add(childScope);
         }
     }
+
     private Scope mainScope = new Scope("main", null); 
     private Scope currentScope = mainScope;  // Start with the main scope and no parent
     private String currVarType = "";
     private String currVarName = "";
     private boolean isFuncCall = false;
     private boolean isSubFunction = false;
+    private Map<String, String> functionCalls = new HashMap<>();
+
 
     // Class to represent a node in the syntax tree
     class Node {
@@ -226,31 +229,8 @@ class ScopeAnalyzer {
 
             if (isFuncCall) {
                 System.out.println("Function call detected: " + functionName);
-
-                boolean isChildScope = false;
-
-                // Check if the function is a child of the current scope
-                for (Scope childScope : currentScope.childScopes) {
-                    if (childScope.scopeName.equals(functionName)) {
-                        isChildScope = true;
-                        break;
-                    }
-                }
-
-                if (isChildScope) {
-                    System.out.println("Function call refers to immediate child scope: " + functionName);
-                } else if (functionName.equals(currentScope.scopeName)) {
-                    if (functionName.equals("main")) {
-                        System.err.println("Error: Can't recurse main.");
-                    } else {
-                        System.out.println("Recursion detected: " + functionName);
-                    }
-                } else {
-                    System.err.println("Error: CALL is not referring to function in immediate scope or child scope.");
-                }
-
-                isFuncCall = false;  
-
+                functionCalls.put(functionName, currentScope.scopeName);
+                isFuncCall = false;
             } else {
                 System.out.println("Function declaration detected: " + functionName);
 
@@ -277,7 +257,7 @@ class ScopeAnalyzer {
                             currentScope = newFunctionScope;
 
                             // Add the function to the function symbol table
-                            String[] parameters = {"num","num","num"}; // Modify to retrieve actual parameters
+                            String[] parameters = {"(num,","num,","num)"}; // Modify to retrieve actual parameters
                             functionTable.addFunction(functionName, parameters, currentScope);
 
                         }else{
@@ -288,8 +268,7 @@ class ScopeAnalyzer {
                             currentScope = newFunctionScope;
                             isSubFunction = false;
 
-                            // Add the function to the function symbol table
-                            String[] parameters = {"num","num","num"}; // Modify to retrieve actual parameters
+                            String[] parameters = {"(num,","num,","num)"}; 
                             functionTable.addFunction(functionName, parameters, currentScope);
                         }
                     }
@@ -301,6 +280,62 @@ class ScopeAnalyzer {
         for (Node child : node.children) {
             depthFirstTraversal(child);
         }
+    }
+
+    public void checkFuncCall() {
+        // Loop through each entry in the functionCalls map
+        for (Map.Entry<String, String> funcCallEntry : functionCalls.entrySet()) {
+            String functionName = funcCallEntry.getKey();
+            String callingScopeName = funcCallEntry.getValue();
+    
+            // Find the scope corresponding to the calling scope
+            Scope callingScope = findScopeByName(callingScopeName, mainScope);
+    
+            if (callingScope != null) {
+                boolean isChildScope = false;
+    
+                // Check if the called function is in the current scope or its child scopes
+                if (callingScope.scopeName.equals(functionName)) {
+                    if (functionName.equals("main")) {
+                        System.err.println("Error: Can't recurse main.");
+                    } else {
+                        System.out.println("Recursion detected in function: " + functionName);
+                    }
+                } else {
+                    // Check the child scopes
+                    for (Scope childScope : callingScope.childScopes) {
+                        if (childScope.scopeName.equals(functionName)) {
+                            isChildScope = true;
+                            break;
+                        }
+                    }
+    
+                    if (isChildScope) {
+                        System.out.println("Function call '" + functionName + "' is in an immediate child scope of '" + callingScopeName + "'.");
+                    } else {
+                        System.err.println("Error: Function '" + functionName + "' not found in immediate scope or child scope of '" + callingScopeName + "'.");
+                    }
+                }
+            } else {
+                System.err.println("Error: Scope '" + callingScopeName + "' not found.");
+            }
+        }
+    }
+    
+    // Helper method to find a scope by name, searching recursively
+    private Scope findScopeByName(String scopeName, Scope currentScope) {
+        if (currentScope.scopeName.equals(scopeName)) {
+            return currentScope;
+        }
+    
+        for (Scope childScope : currentScope.childScopes) {
+            Scope foundScope = findScopeByName(scopeName, childScope);
+            if (foundScope != null) {
+                return foundScope;
+            }
+        }
+    
+        return null; // Scope not found
     }
 
     // Function to print both symbol tables after traversal
@@ -399,6 +434,7 @@ class ScopeAnalyzer {
 
         // Perform a depth-first traversal
         analyzer.depthFirstTraversal(root);
+        analyzer.checkFuncCall();
         analyzer.printAllTables();
     }
 }
