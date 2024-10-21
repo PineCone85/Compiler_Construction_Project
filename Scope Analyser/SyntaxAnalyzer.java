@@ -1,6 +1,8 @@
 import org.w3c.dom.*;                
 import javax.xml.parsers.*;           
-import java.io.File;                 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;           
 import java.util.List;              
 import java.util.HashMap;             
@@ -26,15 +28,15 @@ class ScopeAnalyzer {
         }
     }
 
-    private Scope mainScope = new Scope("main", null); 
-    private Scope currentScope = mainScope;  
-    private String currVarType = "";
-    private String currVarName = "";
-    private boolean isFuncCall = false;
-    private boolean isSubFunction = false;
-    private boolean isFuncParameters = false;
-    private int declarationCounter = 0;
-    private Map<String, String> functionCalls = new HashMap<>();
+    public Scope mainScope = new Scope("main", null); 
+    public Scope currentScope = mainScope;  
+    public String currVarType = "";
+    public String currVarName = "";
+    public boolean isFuncCall = false;
+    public boolean isSubFunction = false;
+    public boolean isFuncParameters = false;
+    public int declarationCounter = 0;
+    public Map<String, String> functionCalls = new HashMap<>();
 
     class Node {
         String symb;
@@ -165,6 +167,7 @@ class ScopeAnalyzer {
 
                 if(declarationCounter >= 3){
                     isFuncParameters = false;
+                    declarationCounter = 0;
                 }
 
                 if(isFuncParameters){
@@ -265,7 +268,7 @@ class ScopeAnalyzer {
                             System.out.println("New function scope opened: " + functionName);
                             currentScope = newFunctionScope;
 
-                            String[] parameters = {"(num,","num,","num)"}; 
+                            String[] parameters = {"(num","num","num)"}; 
                             functionTable.addFunction(functionName, parameters, currentScope);
 
                         }else{
@@ -275,7 +278,7 @@ class ScopeAnalyzer {
                             currentScope = newFunctionScope;
                             isSubFunction = false;
 
-                            String[] parameters = {"(num,","num,","num)"}; 
+                            String[] parameters = {"(num","num","num)"}; 
                             functionTable.addFunction(functionName, parameters, currentScope);
                         }
                     }
@@ -412,15 +415,77 @@ class ScopeAnalyzer {
             root.printNode("");
         }
     }
+
+    public boolean isVariableDeclared(String varName, Scope currentScope) {
+        Scope scopeToCheck = currentScope;
+        while (scopeToCheck != null) {
+            String varKey = varName + "@" + scopeToCheck.scopeName;
+            if (symbolTable.symbolTable.containsKey(varKey)) {
+                return true;  
+            }
+            scopeToCheck = scopeToCheck.parentScope;  
+        }
+        return false;  
+    }
+
+    public boolean isFunctionDeclared(String functionName, Scope currentScope) {
+        Scope scopeToCheck = currentScope;
+        while (scopeToCheck != null) {
+            for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
+                if (entry.functionName.equals(functionName)) {
+                    return true;  
+                }
+            }
+            scopeToCheck = scopeToCheck.parentScope;  
+        }
+        return false;  
+    }
+
+    public String getVariableType(String varName, Scope currentScope) {
+        Scope scopeToCheck = currentScope;
+        while (scopeToCheck != null) {
+            String varKey = varName + "@" + scopeToCheck.scopeName;
+            if (symbolTable.symbolTable.containsKey(varKey)) {
+                return symbolTable.symbolTable.get(varKey).varOrFuncType;  
+            }
+            scopeToCheck = scopeToCheck.parentScope;  
+        }
+        return null;  
+    }
+
+    public String getFunctionReturnType(String functionName, Scope currentScope) {
+        Scope scopeToCheck = currentScope;
+        while (scopeToCheck != null) {
+            for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
+                if (entry.functionName.equals(functionName)) {
+                    return entry.functionID;  
+                }
+            }
+            scopeToCheck = scopeToCheck.parentScope;  
+        }
+        return null;  
+    }
+    
+    
+
     public static void main(String[] args) {
         ScopeAnalyzer analyzer = new ScopeAnalyzer();
         String filePath = "syntax_tree.xml";
+        
 
         Node root = analyzer.parseSyntaxTree(filePath);
+        analyzer.printTree(root);
 
         analyzer.depthFirstTraversal(root);
+        
         analyzer.checkFuncCall();
         analyzer.printAllTables();
+
+        TypeChecker typerChecker = new TypeChecker(analyzer);
+        typerChecker.depthFirstTraversal(root);
+        
     }
 }
+
+
 
