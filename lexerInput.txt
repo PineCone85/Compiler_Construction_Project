@@ -1,0 +1,1 @@
+main text V_num1 , num V_num2 , num V_num3 , begin F_myfunc ( V_num1 , V_num2 , V_num3 ) ; end void F_myfunc ( V_number4 , V_number5 , V_number6 ) { text V_number7 , text V_number8 , num V_num9 , begin V_num9 = "Hallo" ; end } end

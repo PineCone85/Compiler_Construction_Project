@@ -304,10 +304,13 @@ class Parser {
     static TreeNode parseBRANCH() {
         TreeNode node = new TreeNode("BRANCH", false);
         match("if");
+        node.addChild(new TreeNode("if", true));
         node.addChild(parseCOND());
         match("then");
+        node.addChild(new TreeNode("then", true));
         node.addChild(parseALGO());
         match("else");
+        node.addChild(new TreeNode("else", true));
         node.addChild(parseALGO());
         return node;
     }
@@ -366,16 +369,26 @@ class Parser {
         return node;
     }
 
-    // COND -> SIMPLE | COMPOSIT
     static TreeNode parseCOND() {
         TreeNode node = new TreeNode("COND", false);
+        
+        // If the next token is a BINOP, we are either parsing a SIMPLE or COMPOSIT with BINOP
         if (isBinop()) {
-            node.addChild(parseSIMPLE());
-        } else {
+            // Peek ahead to determine if it's SIMPLE (BINOP(ATOMIC, ATOMIC)) or COMPOSIT (BINOP(SIMPLE, SIMPLE))
+            if (isAtomicAhead()) {
+                // Parse SIMPLE: BINOP(ATOMIC, ATOMIC)
+                node.addChild(parseSIMPLE());
+            } else {
+                // Parse COMPOSIT: BINOP(SIMPLE, SIMPLE)
+                node.addChild(parseCOMPOSIT());
+            }
+        } else if (isUnop()) {
+            // If it's a UNOP, we are parsing a COMPOSIT: UNOP(SIMPLE)
             node.addChild(parseCOMPOSIT());
         }
         return node;
     }
+    
 
     // SIMPLE -> BINOP ( ATOMIC , ATOMIC )
     static TreeNode parseSIMPLE() {
@@ -608,6 +621,12 @@ class Parser {
         return tokens.get(index).equals("or") || tokens.get(index).equals("and") || tokens.get(index).equals("eq") || tokens.get(index).equals("grt") || tokens.get(index).equals("add") || tokens.get(index).equals("sub") || tokens.get(index).equals("mul") || tokens.get(index).equals("div");
     }
 
+    static boolean isAtomicAhead() {
+
+        return isVname() || isConst();
+    }
+    
+
     // Save the syntax tree to an XML file
     static void saveTreeToXML(TreeNode tree, String filePath) {
         try {
@@ -659,4 +678,6 @@ class Parser {
     //main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = and ( 5 , 5 ) ; F_function1 ( 5 , 5 , 900 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
     //main num V_count , text V_message , begin V_count = 5 ; V_message = "Hello" ; if grt ( V_count , 0 ) then begin print V_message ; V_count = sub ( V_count , 1 ) ; end else begin halt ; end ; F_factorial ( V_count , 1 , V_message ) ; end num F_factorial ( V_n , V_result , V_msg ) { num V_temp , num V_fun , text V_resultmsg , begin if eq ( V_n , 0 ) then begin V_resultmsg = "Factor" ; print V_resultmsg ; print V_result ; return V_result ; end else begin V_temp = mul ( V_n , V_result ) ; V_n = sub ( V_n , 1 ) ; V_fun = F_factorial ( V_n , V_temp , V_msg ) ; return V_fun ; end ; end } end
     // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = 5 ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
+    // main num V_hello , num V_nope , begin print V_nope ; end void F_fun ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin F_func2 ( 2 , 2 , 2 ) ; end } void F_func ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end void F_func2 ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end end void F_fun2 ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin F_func2 ( 2 , 2 , 2 ) ; end } void F_func ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end void F_func2 ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end end
+    
 }
