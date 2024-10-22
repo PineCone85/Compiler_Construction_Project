@@ -246,7 +246,7 @@ public void parseInput(String input) {
     }
     
 
-    public static void main(String[] args) {
+    public void SLRParsing() {
         SLRParser parser = new SLRParser();
         parser.loadParseTable("p8.csv");
         String xmlFilePath = "output.xml";

@@ -469,7 +469,7 @@ class ScopeAnalyzer {
     
     
 
-    public static void main(String[] args) {
+    public void scopeAndTypeCheck() {
         ScopeAnalyzer analyzer = new ScopeAnalyzer();
         String filePath = "syntax_tree.xml";
         

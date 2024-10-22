@@ -225,10 +225,10 @@ public class Lexer {
         writer.close();
     }
 
-    public static void main(String[] args) {
+    public void Lex() {
         Lexer lexer = new Lexer();
         try {
-            String xmlOutput = lexer.tokenizeToXML("lexerInput.txt");
+            String xmlOutput = lexer.tokenizeToXML("source_code.txt");
             lexer.saveXMLToFile(xmlOutput, "output.xml");
 
             System.out.println("XML file saved to output.xml.");

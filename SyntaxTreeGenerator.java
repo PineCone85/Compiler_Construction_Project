@@ -6,6 +6,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import java.io.*;
+import java.util.Scanner;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -13,8 +15,8 @@ import org.w3c.dom.Element;
 class Parser {
 
     // Tokens from the input
-    private static List<String> tokens;
-    private static int index = 0;
+    public static List<String> tokens;
+    public static int index = 0;
 
     // A class representing the syntax tree node
     static class TreeNode {
@@ -658,21 +660,43 @@ class Parser {
         }
     }
 
-    
-    public static void main(String[] args) {
-        // Read input from the user
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter your input:");
-        String input = scanner.nextLine();
+        public void parse(){
+            // Specify the input file path
+            String inputFilePath = "source_code.txt"; // Path to the text file with the source code
+            String parsedInputFilePath = "parsedCode.txt"; // Output path for the parsed input as a single line
 
-        // Tokenize the input string
-        tokens = tokenize(input);
+            // Read input from the file
+            StringBuilder input = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new FileReader(inputFilePath))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    input.append(line.trim()).append(" ");  // Append each trimmed line with a space
+                }
+            } catch (IOException e) {
+                System.err.println("Error reading the input file: " + e.getMessage());
+                return;
+            }
 
-        // Parse the tokens and generate the syntax tree
-        TreeNode syntaxTree = parsePROG();
+            // Save the input as a single-line parsed input
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(parsedInputFilePath))) {
+                writer.write(input.toString().trim());  // Write the parsed input to a file
+            } catch (IOException e) {
+                System.err.println("Error writing the parsed input to file: " + e.getMessage());
+                return;
+            }
 
-        // Save the tree as an XML file
-        saveTreeToXML(syntaxTree, "syntax_tree.xml");
+            System.out.println("Parsed input has been saved to " + parsedInputFilePath);
+
+            // Tokenize the input string
+            String inputString = input.toString().trim();  // Convert StringBuilder to a String and remove extra spaces
+            tokens = tokenize(inputString);         // Tokenize the entire input
+
+            // Parse the tokens and generate the syntax tree
+            TreeNode syntaxTree = parsePROG();      // Assuming parsePROG() processes the tokens
+
+            // Save the tree as an XML file
+            saveTreeToXML(syntaxTree, "syntax_tree.xml");
+        }
     }
     // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = not ( 5 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
     //main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = and ( 5 , 5 ) ; F_function1 ( 5 , 5 , 900 ) ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
@@ -680,4 +704,4 @@ class Parser {
     // main num V_variable1 , num V_variable2  , num V_variable3 , begin V_variable4 = 5 ; end num F_function1 ( V_variable1  , V_variable2  , V_variable3 ) { num V_variable11 , num V_variable22 , num V_variable33 , begin end } num F_function2 ( V_variable22 , V_variable11 , V_variable33 ) { num V_variable1 , num V_variable2 , num V_variable3 , begin end } end end
     // main num V_hello , num V_nope , begin print V_nope ; end void F_fun ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin F_func2 ( 2 , 2 , 2 ) ; end } void F_func ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end void F_func2 ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end end void F_fun2 ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin F_func2 ( 2 , 2 , 2 ) ; end } void F_func ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end void F_func2 ( V_a , V_b , V_c ) { num V_d , num V_e , num V_f , begin end } end end
     
-}
+
