@@ -374,18 +374,13 @@ class Parser {
     static TreeNode parseCOND() {
         TreeNode node = new TreeNode("COND", false);
         
-        // If the next token is a BINOP, we are either parsing a SIMPLE or COMPOSIT with BINOP
         if (isBinop()) {
-            // Peek ahead to determine if it's SIMPLE (BINOP(ATOMIC, ATOMIC)) or COMPOSIT (BINOP(SIMPLE, SIMPLE))
             if (isAtomicAhead()) {
-                // Parse SIMPLE: BINOP(ATOMIC, ATOMIC)
                 node.addChild(parseSIMPLE());
             } else {
-                // Parse COMPOSIT: BINOP(SIMPLE, SIMPLE)
                 node.addChild(parseCOMPOSIT());
             }
         } else if (isUnop()) {
-            // If it's a UNOP, we are parsing a COMPOSIT: UNOP(SIMPLE)
             node.addChild(parseCOMPOSIT());
         }
         return node;
@@ -624,8 +619,8 @@ class Parser {
     }
 
     static boolean isAtomicAhead() {
-
-        return isVname() || isConst();
+        int tempindex = index;
+        return tokens.get(tempindex + 2).matches("V_[a-zA-Z0-9_]*") || tokens.get(tempindex + 2).matches("\"[A-Za-z ]+\""); 
     }
     
 

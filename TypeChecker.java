@@ -115,7 +115,7 @@ public class TypeChecker {
                 return typecheckPRINT(commandNode.children.get(1));
     
             case "return":
-                return typecheckRETURN(commandNode.children.get(0));
+                return typecheckRETURN(commandNode.children.get(1));
     
             case "ASSIGN":
                 return typecheckASSIGN(commandNode.children.get(0));
@@ -155,19 +155,14 @@ public class TypeChecker {
     }
 
     public boolean typecheckRETURN(Node returnNode) {
-        Node atomicNode = returnNode.children.get(1);  // ATOMIC is the second child
-    
-        // Get the type of the ATOMIC value (the value being returned)
+        Node atomicNode = returnNode; 
+        String functionName = currentScope.scopeName;
+        String CurrentFuncReturnType = scopeAnalyzer.getFunctionReturnType(functionName,currentScope);
         String atomicType = typecheckATOMIC(atomicNode);
-    
-        // For now, assume that functions can only return 'n' (numeric)
-        String functionReturnType = "num";
-    
-        // Compare the return type of the function with the type of the returned value
-        if (atomicType.equals(functionReturnType)) {
-            return true;  // Valid return
-        } else {
-            System.err.println("Type Error: Function must return a numeric value, but found type '" + atomicType + "'.");
+
+        if(atomicType.equals(CurrentFuncReturnType)){
+            return true;
+        }else{
             return false;
         }
     }

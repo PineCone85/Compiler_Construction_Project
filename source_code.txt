@@ -1,1 +1,47 @@
-main num V_num1 , num V_num2 , num V_num3 , begin F_myfunc ( V_num1 , V_num2 , V_num3 ) ; end void F_myfunc ( V_number4 , V_number5 , V_number6 ) { text V_number7 , text V_number8 , num V_num9 , begin V_num9 = 5 ; end } end
+main
+num V_a , num V_b , num V_c ,
+text V_str ,
+
+begin
+    V_a = 5 ;
+    V_b = 10 ;
+    V_str = "Hello" ;
+    print V_str ;
+    if grt ( V_a , V_b ) then 
+        begin
+            V_c = add ( V_a , V_b ) ;
+            print V_c ;
+        end 
+    else 
+        begin
+            V_c = sub ( V_b , V_a ) ;
+            print V_c ;
+        end ;
+end
+
+void F_func ( V_x , V_y , V_z )
+{
+    num V_l , num V_m , num V_n ,
+    begin
+        V_l = mul ( V_x , V_y ) ;
+    end
+}
+    num F_func2 ( V_num , V_unused1 , V_unused2 )
+    {
+        num V_res , num V_temp , num V_unused ,
+        begin
+            V_res = mul ( V_num , V_num ) ;
+            return V_res ;
+        end
+    }
+    end
+end
+    num F_square ( V_num , V_unused1 , V_unused2 )
+    {
+        num V_res , num V_temp , num V_unused ,
+        begin
+            V_res = mul ( V_num , V_num ) ;
+            return V_res ;
+        end
+    }
+end
