@@ -482,8 +482,7 @@ class ScopeAnalyzer {
         analyzer.printAllTables();
 
         TypeChecker typerChecker = new TypeChecker(analyzer);
-        typerChecker.depthFirstTraversal(root);
-        
+        typerChecker.depthFirstTraversal(root);      
     }
 }
 
