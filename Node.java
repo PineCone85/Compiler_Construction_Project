@@ -1,13 +1,6 @@
-import org.w3c.dom.*;                
-import javax.xml.parsers.*;           
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;           
 import java.util.List;              
-import java.util.HashMap;             
-import java.util.Map;                 
-import java.util.UUID;
+
 
 class Node {
     String symb;

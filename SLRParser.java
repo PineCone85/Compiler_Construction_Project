@@ -10,7 +10,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
 import java.io.File;
-import java.util.ArrayList;
 
 public class SLRParser {
 
@@ -69,7 +68,6 @@ public void parseInput(String input) {
         int currentState = stateStack.peek();  
         String currentToken = (i < tokens.length) ? tokens[i] : "$"; 
 
-        // Get the action from the parse table
         String action = parseTable.get(currentState + "," + currentToken);
         System.out.println("Current State: " + currentState + ", Current Token: " + currentToken);
         System.out.println("Action: " + action);
@@ -210,29 +208,22 @@ public void parseInput(String input) {
     public String parseXMLFile(String xmlFilePath) {
         StringBuilder inputString = new StringBuilder();
         try {
-            // Initialize XML Document parser
             File inputFile = new File(xmlFilePath);
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document doc = dBuilder.parse(inputFile);
             doc.getDocumentElement().normalize();
-    
-            // Get all <TOK> elements
+
             NodeList tokenList = doc.getElementsByTagName("TOK");
-    
-            // Iterate over all <TOK> nodes to extract <WORD> and <CLASS> values
+
             for (int i = 0; i < tokenList.getLength(); i++) {
                 Element tokElement = (Element) tokenList.item(i);
-    
-                // Get the <CLASS> element inside the <TOK>
+
                 String tokenClass = tokElement.getElementsByTagName("CLASS").item(0).getTextContent();
-    
-                // Check if <CLASS> is N, T, V, or F
+
                 if (tokenClass.equals("N") || tokenClass.equals("T") || tokenClass.equals("V") || tokenClass.equals("F")) {
-                    // Use the <CLASS> value (N, T, V, or F) as the token
                     inputString.append(tokenClass).append(" ");
                 } else {
-                    // Otherwise, use the <WORD> element as the token
                     String word = tokElement.getElementsByTagName("WORD").item(0).getTextContent();
                     inputString.append(word).append(" ");
                 }
@@ -240,8 +231,7 @@ public void parseInput(String input) {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    
-        // Return the constructed input string, trimming any trailing spaces
+
         return inputString.toString().trim();
     }
     

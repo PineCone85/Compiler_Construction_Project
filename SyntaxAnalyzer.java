@@ -1,8 +1,6 @@
 import org.w3c.dom.*;                
 import javax.xml.parsers.*;           
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;           
 import java.util.List;              
 import java.util.HashMap;             
@@ -128,10 +126,19 @@ class ScopeAnalyzer {
         }
 
         if (node.symb.equals("SUBFUNCS")) {
-            isSubFunction = true;  
+            Node funcNode = node.children.get(0);
+            boolean hasSubFunction = false;
+            if(funcNode.children.size() != 0){
+                hasSubFunction = true;
+            }
+            if (hasSubFunction) {
+                isSubFunction = true;  
+                System.out.println("Subfunctions detected.");
+            } else {
+                isSubFunction = false;
+                System.out.println("No subfunctions found, SUBFUNCS is nullable.");
+            }
         }
-
-
 
         if (node.symb.equals("VTYP")) {
             if (!node.children.isEmpty()) {
@@ -235,41 +242,44 @@ class ScopeAnalyzer {
             } else {
                 System.out.println("Function declaration detected: " + functionName);
                 isFuncParameters = true;
-                if (functionName.equals(currentScope.scopeName)) {
-                    System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
+                boolean siblingConflict = false;
+                for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
+                    if (entry.functionName.equals(functionName) && entry.scope.parentScope.scopeName == currentScope.parentScope.scopeName) {
+                        siblingConflict = true;
+                        break;
+                    }
+                }                
+                if (siblingConflict) {
+                    System.err.println("Error: Function '" + functionName + "' cannot have the same name as a sibling scope.");
                 } else {
-                    boolean siblingConflict = false;
-                    for (SymbolEntry entry : symbolTable.symbolTable.values()) {
-                        if (entry.entryType.equals("FNAME") && entry.name.equals(functionName) && entry.scope == currentScope.parentScope) {
-                            siblingConflict = true;
-                            break;
+                    if (!isSubFunction) {
+                        currentScope = mainScope;
+                        if (functionName.equals(currentScope.scopeName)) {
+                            System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
                         }
+                        Scope newFunctionScope = new Scope(functionName, currentScope);
+                        currentScope.addChildScope(newFunctionScope);
+                        System.out.println("New function scope opened: " + functionName);
+                        currentScope = newFunctionScope;
+
+                        String[] parameters = {"(num","num","num)"}; 
+                        functionTable.addFunction(functionName, parameters, funcType, currentScope);
+
+                    }else{
+                        
+                        Scope newFunctionScope = new Scope(functionName, currentScope);
+                        currentScope.addChildScope(newFunctionScope);
+                        System.out.println("New function scope opened: " + functionName);
+                        currentScope = newFunctionScope;
+                        isSubFunction = false;
+
+                        String[] parameters = {"(num","num","num)"}; 
+                        functionTable.addFunction(functionName, parameters, funcType, currentScope);
                     }
-                    if (siblingConflict) {
-                        System.err.println("Error: Function '" + functionName + "' cannot have the same name as a sibling scope.");
-                    } else {
-                        if (!isSubFunction) {
-                            currentScope = mainScope;
-                            Scope newFunctionScope = new Scope(functionName, currentScope);
-                            currentScope.addChildScope(newFunctionScope);
-                            System.out.println("New function scope opened: " + functionName);
-                            currentScope = newFunctionScope;
+                
+            }
+                
 
-                            String[] parameters = {"(num","num","num)"}; 
-                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
-
-                        }else{
-                            Scope newFunctionScope = new Scope(functionName, currentScope);
-                            currentScope.addChildScope(newFunctionScope);
-                            System.out.println("New function scope opened: " + functionName);
-                            currentScope = newFunctionScope;
-                            isSubFunction = false;
-
-                            String[] parameters = {"(num","num","num)"}; 
-                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
-                        }
-                    }
-                }
             }
         }
         for (Node child : node.children) {
@@ -454,14 +464,12 @@ class ScopeAnalyzer {
     }
 
     public Scope getScopeForFunction(String functionName) {
-        // Iterate through the function table to find the function by name
         for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
             if (entry.functionName.equals(functionName)) {
-                return entry.scope;  // Return the scope associated with the function
+                return entry.scope;
             }
         }
-        
-        // If no function with the given name is found, return null
+
         System.err.println("Error: Function '" + functionName + "' not found in the function table.");
         return null;
     }
