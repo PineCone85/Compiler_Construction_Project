@@ -253,28 +253,36 @@ class ScopeAnalyzer {
                     System.err.println("Error: Function '" + functionName + "' cannot have the same name as a sibling scope.");
                 } else {
                     if (!isSubFunction) {
-                        currentScope = mainScope;
+                        if(currentScope.scopeName != "main"){
+                            currentScope = currentScope.parentScope;
+                        }
                         if (functionName.equals(currentScope.scopeName)) {
                             System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
+                        }else{
+                            Scope newFunctionScope = new Scope(functionName, currentScope);
+                            currentScope.addChildScope(newFunctionScope);
+                            System.out.println("New function scope opened: " + functionName);
+                            currentScope = newFunctionScope;
+    
+                            String[] parameters = {"(num","num","num)"}; 
+                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
                         }
-                        Scope newFunctionScope = new Scope(functionName, currentScope);
-                        currentScope.addChildScope(newFunctionScope);
-                        System.out.println("New function scope opened: " + functionName);
-                        currentScope = newFunctionScope;
-
-                        String[] parameters = {"(num","num","num)"}; 
-                        functionTable.addFunction(functionName, parameters, funcType, currentScope);
+                       
 
                     }else{
-                        
-                        Scope newFunctionScope = new Scope(functionName, currentScope);
-                        currentScope.addChildScope(newFunctionScope);
-                        System.out.println("New function scope opened: " + functionName);
-                        currentScope = newFunctionScope;
-                        isSubFunction = false;
+                        if (functionName.equals(currentScope.scopeName)) {
+                            System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
+                        }else{
+                            Scope newFunctionScope = new Scope(functionName, currentScope);
+                            currentScope.addChildScope(newFunctionScope);
+                            System.out.println("New function scope opened: " + functionName);
+                            currentScope = newFunctionScope;
+                            isSubFunction = false;
 
-                        String[] parameters = {"(num","num","num)"}; 
-                        functionTable.addFunction(functionName, parameters, funcType, currentScope);
+                            String[] parameters = {"(num","num","num)"}; 
+                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
+                        }
+                       
                     }
                 
             }
