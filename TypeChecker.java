@@ -517,15 +517,10 @@ public class TypeChecker {
         }
  
         // Check if all VNAME arguments are numeric ('n')
-        System.out.println(currentScope.scopeName);
+
         String vname1Type = scopeAnalyzer.getVariableType(vname1Node.children.get(0).symb, currentScope);
-        System.out.println(currentScope.scopeName);
         String vname2Type = scopeAnalyzer.getVariableType(vname2Node.children.get(0).symb, currentScope);
-        System.out.println(currentScope.scopeName);
         String vname3Type = scopeAnalyzer.getVariableType(vname3Node.children.get(0).symb, currentScope);
-        System.out.println(currentScope.scopeName);
-
-
     
         if (vname1Type.equals("num") && vname2Type.equals("num") && vname3Type.equals("num")) {
             return true;  // All arguments are numeric
@@ -539,7 +534,7 @@ public class TypeChecker {
         // FTYP ::= num | void
         switch (ftypNode.children.get(0).symb) {
             case "num":
-                return "n";  
+                return "num";  
             case "void":
                 return "void";  
             default:
