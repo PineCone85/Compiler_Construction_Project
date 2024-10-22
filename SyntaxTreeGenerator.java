@@ -304,10 +304,13 @@ class Parser {
     static TreeNode parseBRANCH() {
         TreeNode node = new TreeNode("BRANCH", false);
         match("if");
+        node.addChild(new TreeNode("if", true));
         node.addChild(parseCOND());
         match("then");
+        node.addChild(new TreeNode("then", true));
         node.addChild(parseALGO());
         match("else");
+        node.addChild(new TreeNode("else", true));
         node.addChild(parseALGO());
         return node;
     }
@@ -366,16 +369,26 @@ class Parser {
         return node;
     }
 
-    // COND -> SIMPLE | COMPOSIT
     static TreeNode parseCOND() {
         TreeNode node = new TreeNode("COND", false);
+        
+        // If the next token is a BINOP, we are either parsing a SIMPLE or COMPOSIT with BINOP
         if (isBinop()) {
-            node.addChild(parseSIMPLE());
-        } else {
+            // Peek ahead to determine if it's SIMPLE (BINOP(ATOMIC, ATOMIC)) or COMPOSIT (BINOP(SIMPLE, SIMPLE))
+            if (isAtomicAhead()) {
+                // Parse SIMPLE: BINOP(ATOMIC, ATOMIC)
+                node.addChild(parseSIMPLE());
+            } else {
+                // Parse COMPOSIT: BINOP(SIMPLE, SIMPLE)
+                node.addChild(parseCOMPOSIT());
+            }
+        } else if (isUnop()) {
+            // If it's a UNOP, we are parsing a COMPOSIT: UNOP(SIMPLE)
             node.addChild(parseCOMPOSIT());
         }
         return node;
     }
+    
 
     // SIMPLE -> BINOP ( ATOMIC , ATOMIC )
     static TreeNode parseSIMPLE() {
@@ -607,6 +620,12 @@ class Parser {
     static boolean isBinop() {
         return tokens.get(index).equals("or") || tokens.get(index).equals("and") || tokens.get(index).equals("eq") || tokens.get(index).equals("grt") || tokens.get(index).equals("add") || tokens.get(index).equals("sub") || tokens.get(index).equals("mul") || tokens.get(index).equals("div");
     }
+
+    static boolean isAtomicAhead() {
+
+        return isVname() || isConst();
+    }
+    
 
     // Save the syntax tree to an XML file
     static void saveTreeToXML(TreeNode tree, String filePath) {

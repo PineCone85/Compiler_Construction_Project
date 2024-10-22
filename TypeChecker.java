@@ -5,31 +5,9 @@ import org.w3c.dom.*;
 
 public class TypeChecker {
 
-        class Node {
-        String symb;
-        String unid;
-        List<Node> children;
-
-        Node(String symb, String unid) {
-            this.symb = symb;
-            this.unid = unid;
-            this.children = new ArrayList<>();
-        }
-
-        void addChild(Node child) {
-            this.children.add(child);
-        }
-
-        void printNode(String indent) {
-            System.out.println(indent + "Symbol: " + symb + ", UNID: " + unid);
-            for (Node child : children) {
-                child.printNode(indent + "  ");
-            }
-        }
-    }
-
     private ScopeAnalyzer scopeAnalyzer;
     private ScopeAnalyzer.Scope currentScope; 
+    private boolean isCall = false;
 
     public TypeChecker(ScopeAnalyzer scopeAnalyzer) {
         this.scopeAnalyzer = scopeAnalyzer;
@@ -50,7 +28,7 @@ public class TypeChecker {
 
     public boolean typecheckPROG(Node progNode) {
         return typecheckGLOBVARS(progNode.children.get(1)) && 
-               typecheckALGO(progNode.children.get(2)) && 
+               typecheckALGO(progNode.children.get(2)) &&
                typecheckFUNCTIONS(progNode.children.get(3));
     }
 
@@ -63,9 +41,10 @@ public class TypeChecker {
         Node vnameNode = globVarsNode.children.get(1);  
     
         String expectedType = typecheckVTYP(vtypNode);  
-        String varName = vnameNode.symb;             
+        String varName = vnameNode.children.get(0).symb;   
+
     
-        String actualType = scopeAnalyzer.getVariableType(varName, scopeAnalyzer.mainScope);
+        String actualType = scopeAnalyzer.getVariableType(varName, currentScope);
     
         if (!expectedType.equals(actualType)) {
             System.err.println("Type Error: Variable '" + varName + "' expected to be of type '" + expectedType + "', but found type '" + actualType + "'.");
@@ -77,16 +56,16 @@ public class TypeChecker {
     
 
     private String typecheckVTYP(Node vtypNode) {
-        if (vtypNode.symb.equals("num")) {
-            return "n";  
-        } else if (vtypNode.symb.equals("text")) {
-            return "t";  
+        if (vtypNode.children.get(0).symb.equals("num")) {
+            return "num";  
+        } else if (vtypNode.children.get(0).symb.equals("text")) {
+            return "text";  
         }
         return "u";
     }
 
     public String typecheckVNAME(Node vnameNode) {
-        String varName = vnameNode.symb;
+        String varName = vnameNode.children.get(0).symb;
     
         // Look up the variable in the current scope, moving up the scope chain if necessary
         String varType = scopeAnalyzer.getVariableType(varName, currentScope);
@@ -94,7 +73,7 @@ public class TypeChecker {
         // If the variable is not found, report an error
         if (varType == null) {
             System.err.println("Type Error: Variable '" + varName + "' is not declared in the current or ancestor scopes.");
-            return "u";  // Return 'u' for undefined type
+            return "u"; 
         }
     
         // Return the variable's type
@@ -114,42 +93,45 @@ public class TypeChecker {
         if (instrucNode.children.isEmpty()) {
             return true;
         }
-    
+        Node nextInstrucNode;
         // Recursive case: INSTRUC1 ::= COMMAND ; INSTRUC2
         Node commandNode = instrucNode.children.get(0);  // First child is COMMAND
-        Node nextInstrucNode = instrucNode.children.get(1);  // Second child is the next INSTRUC
-    
+        if(instrucNode.children.size() <= 2){
+            nextInstrucNode = instrucNode.children.get(1);
+        }else{
+            nextInstrucNode = instrucNode.children.get(2);
+        }
         // Typecheck the COMMAND and the next INSTRUC
         return typecheckCOMMAND(commandNode) && typecheckINSTRUC(nextInstrucNode);
     }
 
     public boolean typecheckCOMMAND(Node commandNode) {
-        switch (commandNode.symb) {
+        switch (commandNode.children.get(0).symb) {
             case "skip":
             case "halt":
                 return true;  // These are base cases and always pass
     
             case "print":
-                return typecheckPRINT(commandNode);
+                return typecheckPRINT(commandNode.children.get(1));
     
             case "return":
-                return typecheckRETURN(commandNode);
+                return typecheckRETURN(commandNode.children.get(0));
     
             case "ASSIGN":
-                return typecheckASSIGN(commandNode);
+                return typecheckASSIGN(commandNode.children.get(0));
     
             case "CALL":
-                // Call typecheckCALL and verify if the function is of type 'void' ('v')
-                String callReturnType = typecheckCALL(commandNode);
-                if (callReturnType.equals("v")) {
-                    return true;  // Valid CALL with void return type
+
+                String callReturnType = typecheckCALL(commandNode.children.get(0));
+                if (callReturnType.equals("void")) {
+                    return true;  
                 } else {
                     System.err.println("Type Error: Function call must return 'void', but got type '" + callReturnType + "'.");
                     return false;
                 }
     
             case "BRANCH":
-                return typecheckBRANCH(commandNode);
+                return typecheckBRANCH(commandNode.children.get(0));
     
             default:
                 System.err.println("Error: Unrecognized command '" + commandNode.symb + "'.");
@@ -158,14 +140,13 @@ public class TypeChecker {
     }
     
 
-    public boolean typecheckPRINT(Node printNode) {
-        Node atomicNode = printNode.children.get(1);  // ATOMIC is the second child
-    
+    public boolean typecheckPRINT(Node atmoicNode) {
+        Node atomicNode = atmoicNode; 
         // Get the type of the ATOMIC value
         String atomicType = typecheckATOMIC(atomicNode);
     
         // Check if ATOMIC is either 'n' (numeric) or 't' (text)
-        if (atomicType.equals("n") || atomicType.equals("t")) {
+        if (atomicType.equals("num") || atomicType.equals("text")) {
             return true;  // Valid types for print
         } else {
             System.err.println("Type Error: print expects a numeric or text value.");
@@ -180,7 +161,7 @@ public class TypeChecker {
         String atomicType = typecheckATOMIC(atomicNode);
     
         // For now, assume that functions can only return 'n' (numeric)
-        String functionReturnType = "n";
+        String functionReturnType = "num";
     
         // Compare the return type of the function with the type of the returned value
         if (atomicType.equals(functionReturnType)) {
@@ -192,36 +173,26 @@ public class TypeChecker {
     }
 
     public String typecheckCALL(Node callNode) {
-        // Get the function name (FNAME is the first child of CALL)
-        String functionName = callNode.children.get(0).symb;
-    
-        // Look up the function's return type from the symbol table
-        String returnType = scopeAnalyzer.getFunctionReturnType(functionName, scopeAnalyzer.mainScope);
-    
-        // Ensure the function exists
-        if (returnType == null) {
-            System.err.println("Type Error: Function '" + functionName + "' is not declared.");
-            return "u";  // Undefined if function is not found
-        }
-    
-        // Check the types of the three parameters (ATOMIC1, ATOMIC2, ATOMIC3)
-        String atomicType1 = typecheckATOMIC(callNode.children.get(1));
-        String atomicType2 = typecheckATOMIC(callNode.children.get(2));
-        String atomicType3 = typecheckATOMIC(callNode.children.get(3));
-    
-        // Ensure all three parameters are numeric ('n')
-        if (atomicType1.equals("n") && atomicType2.equals("n") && atomicType3.equals("n")) {
-            return returnType;  // Return the function's return type
-        } else {
-            System.err.println("Type Error: Function '" + functionName + "' expects numeric arguments.");
-            return "u";  // Undefined if any argument is not numeric
+        isCall = true;
+        Node fnameNode = callNode.children.get(0);
+        Node atomicNode1 = callNode.children.get(2);
+        Node atomicNode2 = callNode.children.get(4);
+        Node atomicNode3 = callNode.children.get(6);
+
+        String atomic1Type = typecheckATOMIC(atomicNode1);
+        String atomic2Type = typecheckATOMIC(atomicNode1);
+        String atomic3Type = typecheckATOMIC(atomicNode1);
+
+        if( atomic1Type.equals("num") && atomic3Type.equals("num") && atomic2Type.equals("num")){
+            return typecheckFNAME(fnameNode);
+        }else{
+            return "u";
         }
     }
     
 
     public String typecheckATOMIC(Node atomicNode) {
         Node childNode = atomicNode.children.get(0);  // ATOMIC has one child, either VNAME or CONST
-    
         // Determine whether ATOMIC is a VNAME or a CONST
         if (childNode.symb.equals("VNAME")) {
             return typecheckVNAME(childNode);  // Delegate to typecheckVNAME
@@ -234,16 +205,19 @@ public class TypeChecker {
     }
 
     public String typecheckCONST(Node constNode) {
+        String numberPattern = "0|0\\.([0-9])*[1-9]|-0\\.([0-9])*[1-9]|[1-9]([0-9])*|-?[1-9]([0-9])*(\\.[0-9]*[1-9])?";
+        String textPattern = "\"[A-Z][a-z]{0,7}\"";
+
         String constType = constNode.children.get(0).symb;
-    
+       
         // Determine the type of the constant
-        if (constType.equals("N")) {
-            return "n";  // Numeric type
-        } else if (constType.equals("T")) {
-            return "t";  // Text type
+        if (constType.matches(numberPattern)) {
+            return "num";
+        } else if (constType.matches(textPattern)) {
+            return "text"; 
         } else {
             System.err.println("Type Error: Unrecognized constant type.");
-            return "u";  // Undefined type
+            return "u";
         }
     }
 
@@ -263,14 +237,13 @@ public class TypeChecker {
     
         // ASSIGN ::= VNAME = TERM
         if (assignNode.children.size() == 3 && assignNode.children.get(1).symb.equals("=")) {
-            Node termNode = assignNode.children.get(2);  // TERM is the third child
-            String termType = typecheckTERM(termNode);  // Get the type of the TERM
-    
-            // Check if the types of VNAME and TERM match
+            Node termNode = assignNode.children.get(2);
+            String termType = typecheckTERM(termNode);  
+       
             if (vnameType.equals(termType)) {
-                return true;  // Valid assignment
+                return true;  
             } else {
-                System.err.println("Type Error: Variable '" + vnameNode.symb + "' is of type '" + vnameType +
+                System.err.println("Type Error: Variable '" + vnameNode.children.get(0).symb + "' is of type '" + vnameType +
                                    "', but assigned a value of type '" + termType + "'.");
                 return false;
             }
@@ -284,7 +257,6 @@ public class TypeChecker {
     public String typecheckTERM(Node termNode) {
         // TERM has one child, which could be ATOMIC, CALL, or OP
         Node childNode = termNode.children.get(0);
-    
         // Determine the type of TERM based on its child
         switch (childNode.symb) {
             case "ATOMIC":
@@ -301,7 +273,6 @@ public class TypeChecker {
 
     public String typecheckOP(Node opNode) {
         Node operatorNode = opNode.children.get(0);  // First child is the operator
-    
         if (operatorNode.symb.equals("UNOP")) {
             // OP ::= UNOP( ARG )
             Node argNode = opNode.children.get(2);  // ARG is the third child (index 2, skipping '(')
@@ -319,21 +290,20 @@ public class TypeChecker {
                 return "u";  // Undefined type
             }
         } else if (operatorNode.symb.equals("BINOP")) {
-            // OP ::= BINOP( ARG1 , ARG2 )
+
             Node arg1Node = opNode.children.get(2);  // ARG1 is the third child (index 2, skipping '(')
-            Node arg2Node = opNode.children.get(4);  // ARG2 is the fifth child (index 4, skipping ',')
-    
+            Node arg2Node = opNode.children.get(4);  
             // Get the types of BINOP, ARG1, and ARG2
             String binopType = typecheckBINOP(operatorNode);
             String arg1Type = typecheckARG(arg1Node);
             String arg2Type = typecheckARG(arg2Node);
     
             // Check if BINOP and both arguments are of the same type
-            if (binopType.equals("b") && arg1Type.equals("b") && arg2Type.equals("b")) {
+            if (binopType.equals("b") && arg1Type.equals("num") && arg2Type.equals("num")) {
                 return "b";  // Boolean result
-            } else if (binopType.equals("n") && arg1Type.equals("n") && arg2Type.equals("n")) {
-                return "n";  // Numeric result
-            } else if (binopType.equals("c") && arg1Type.equals("n") && arg2Type.equals("n")) {
+            } else if (binopType.equals("n") && arg1Type.equals("num") && arg2Type.equals("num")) {
+                return "num";  // Numeric result
+            } else if (binopType.equals("c") && arg1Type.equals("num") && arg2Type.equals("num")) {
                 return "b";  // Comparison result is boolean
             } else {
                 return "u";  // Undefined type
@@ -368,7 +338,8 @@ public class TypeChecker {
     }
     
     public String typecheckBINOP(Node binopNode) {
-        switch (binopNode.symb) {
+
+        switch (binopNode.children.get(0).symb) {
             case "or":
             case "and":
                 return "b";  
@@ -386,7 +357,7 @@ public class TypeChecker {
     }
 
     public boolean typecheckBRANCH(Node branchNode) {
-
+        
     
         Node condNode = branchNode.children.get(1); 
         Node algo1Node = branchNode.children.get(3); 
@@ -417,21 +388,21 @@ public class TypeChecker {
 
     public String typecheckSIMPLE(Node simpleNode) {
         // SIMPLE ::= BINOP( ATOMIC1 , ATOMIC2 )
+
         Node binopNode = simpleNode.children.get(0);  // BINOP is the first child
         Node atomic1Node = simpleNode.children.get(2); // ATOMIC1 is the third child (index 2, skipping '(')
         Node atomic2Node = simpleNode.children.get(4); // ATOMIC2 is the fifth child (index 4, skipping ',')
-    
+
         // Get the types of BINOP, ATOMIC1, and ATOMIC2
         String binopType = typecheckBINOP(binopNode);
         String atomic1Type = typecheckATOMIC(atomic1Node);
         String atomic2Type = typecheckATOMIC(atomic2Node);
-    
         // Check if BINOP, ATOMIC1, and ATOMIC2 are boolean
         if (binopType.equals("b") && atomic1Type.equals("b") && atomic2Type.equals("b")) {
             return "b";  // Boolean result
         }
         // Check if BINOP is a comparison and both ATOMICs are numeric
-        else if (binopType.equals("c") && atomic1Type.equals("n") && atomic2Type.equals("n")) {
+        else if (binopType.equals("c") && atomic1Type.equals("num") && atomic2Type.equals("num")) {
             return "b";  // Comparison result is boolean
         }
         // Otherwise, the type is undefined
@@ -449,7 +420,6 @@ public class TypeChecker {
             Node binopNode = compositNode.children.get(0);  // BINOP is the first child
             Node simple1Node = compositNode.children.get(2); // SIMPLE1 is the third child (index 2, skipping '(')
             Node simple2Node = compositNode.children.get(4); // SIMPLE2 is the fifth child (index 4, skipping ',')
-    
             // Get the types of BINOP, SIMPLE1, and SIMPLE2
             String binopType = typecheckBINOP(binopNode);
             String simple1Type = typecheckSIMPLE(simple1Node);
@@ -487,12 +457,12 @@ public class TypeChecker {
     }
 
     public String typecheckFNAME(Node fnameNode) {
-        // FNAME is a token from the lexer
         String functionName = fnameNode.children.get(0).symb;
-    
-        // Look up the function's return type in the symbol table
-        String returnType = scopeAnalyzer.getFunctionReturnType(functionName, scopeAnalyzer.mainScope);
-    
+        if(!isCall){
+            enterScope(scopeAnalyzer.getScopeForFunction(functionName));
+        }
+        isCall = false;
+        String returnType = scopeAnalyzer.getFunctionReturnType(functionName, currentScope);
         if (returnType != null) {
             return returnType;  // Return the function's return type from the symbol table
         } else {
@@ -502,13 +472,17 @@ public class TypeChecker {
     }
 
     public boolean typecheckFUNCTIONS(Node functionsNode) {
-        // FUNCTIONS1 ::= DECL FUNCTIONS2
-    
-        Node declNode = functionsNode.children.get(0);  // DECL is the first child
-        Node functions2Node = functionsNode.children.get(1);  // FUNCTIONS2 is the second child
+        // Base case: If FUNCTIONS is empty (no children), return true
+        if (functionsNode.children.isEmpty()) {
+            return true;  // Base-case of the type-checking recursion
+        }
+        
+        Node declNode = functionsNode.children.get(0); 
+        Node functions2Node = functionsNode.children.get(1);  
     
         return typecheckDECL(declNode) && typecheckFUNCTIONS(functions2Node);
     }
+    
 
     public boolean typecheckDECL(Node declNode) {
         // DECL ::= HEADER BODY
@@ -526,28 +500,34 @@ public class TypeChecker {
         Node ftypNode = headerNode.children.get(0);   // FTYP is the first child
         Node fnameNode = headerNode.children.get(1);  // FNAME is the second child
         Node vname1Node = headerNode.children.get(3); // VNAME1 is the fourth child (index 3)
-        Node vname2Node = headerNode.children.get(4); // VNAME2 is the fifth child (index 4)
-        Node vname3Node = headerNode.children.get(5); // VNAME3 is the sixth child (index 5)
+        Node vname2Node = headerNode.children.get(5); // VNAME2 is the fifth child (index 4)
+        Node vname3Node = headerNode.children.get(7); // VNAME3 is the sixth child (index 5)
     
         // Get the type of FTYP (return type of the function)
         String ftypType = typecheckFTYP(ftypNode);
-    
+
         // Get the function name (FNAME) and look up its type in the symbol table
         String functionName = fnameNode.children.get(0).symb;
-        String symbolTableReturnType = scopeAnalyzer.getFunctionReturnType(functionName, scopeAnalyzer.mainScope);
+        String symbolTableReturnType = typecheckFNAME(fnameNode);
     
         // Ensure that the function's return type matches the declared FTYP
         if (!ftypType.equals(symbolTableReturnType)) {
             System.err.println("Type Error: Function '" + functionName + "' has a mismatched return type.");
             return false;
         }
-    
+ 
         // Check if all VNAME arguments are numeric ('n')
-        String vname1Type = scopeAnalyzer.getVariableType(vname1Node.children.get(0).symb, scopeAnalyzer.mainScope);
-        String vname2Type = scopeAnalyzer.getVariableType(vname2Node.children.get(0).symb, scopeAnalyzer.mainScope);
-        String vname3Type = scopeAnalyzer.getVariableType(vname3Node.children.get(0).symb, scopeAnalyzer.mainScope);
+        System.out.println(currentScope.scopeName);
+        String vname1Type = scopeAnalyzer.getVariableType(vname1Node.children.get(0).symb, currentScope);
+        System.out.println(currentScope.scopeName);
+        String vname2Type = scopeAnalyzer.getVariableType(vname2Node.children.get(0).symb, currentScope);
+        System.out.println(currentScope.scopeName);
+        String vname3Type = scopeAnalyzer.getVariableType(vname3Node.children.get(0).symb, currentScope);
+        System.out.println(currentScope.scopeName);
+
+
     
-        if (vname1Type.equals("n") && vname2Type.equals("n") && vname3Type.equals("n")) {
+        if (vname1Type.equals("num") && vname2Type.equals("num") && vname3Type.equals("num")) {
             return true;  // All arguments are numeric
         } else {
             System.err.println("Type Error: Function '" + functionName + "' has non-numeric arguments.");
@@ -561,7 +541,7 @@ public class TypeChecker {
             case "num":
                 return "n";  
             case "void":
-                return "v";  
+                return "void";  
             default:
                 System.err.println("Type Error: Unrecognized FTYP '" + ftypNode.children.get(0).symb + "'.");
                 return "u";
@@ -607,7 +587,7 @@ public class TypeChecker {
     
         // Typecheck the first variable
         String vtyp1Type = typecheckVTYP(vtyp1Node);
-        String vname1Type = scopeAnalyzer.getVariableType(vname1Node.children.get(0).symb, scopeAnalyzer.mainScope);
+        String vname1Type = scopeAnalyzer.getVariableType(vname1Node.children.get(0).symb, currentScope);
         if (!vtyp1Type.equals(vname1Type)) {
             System.err.println("Type Error: Variable '" + vname1Node.children.get(0).symb + "' does not match its declared type.");
             return false;
@@ -615,7 +595,7 @@ public class TypeChecker {
     
         // Typecheck the second variable
         String vtyp2Type = typecheckVTYP(vtyp2Node);
-        String vname2Type = scopeAnalyzer.getVariableType(vname2Node.children.get(0).symb, scopeAnalyzer.mainScope);
+        String vname2Type = scopeAnalyzer.getVariableType(vname2Node.children.get(0).symb, currentScope);
         if (!vtyp2Type.equals(vname2Type)) {
             System.err.println("Type Error: Variable '" + vname2Node.children.get(0).symb + "' does not match its declared type.");
             return false;
@@ -623,7 +603,7 @@ public class TypeChecker {
     
         // Typecheck the third variable
         String vtyp3Type = typecheckVTYP(vtyp3Node);
-        String vname3Type = scopeAnalyzer.getVariableType(vname3Node.children.get(0).symb, scopeAnalyzer.mainScope);
+        String vname3Type = scopeAnalyzer.getVariableType(vname3Node.children.get(0).symb, currentScope);
         if (!vtyp3Type.equals(vname3Type)) {
             System.err.println("Type Error: Variable '" + vname3Node.children.get(0).symb + "' does not match its declared type.");
             return false;

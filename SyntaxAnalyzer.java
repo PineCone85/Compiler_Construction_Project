@@ -32,34 +32,12 @@ class ScopeAnalyzer {
     public Scope currentScope = mainScope;  
     public String currVarType = "";
     public String currVarName = "";
+    public String funcType = "";
     public boolean isFuncCall = false;
     public boolean isSubFunction = false;
     public boolean isFuncParameters = false;
     public int declarationCounter = 0;
     public Map<String, String> functionCalls = new HashMap<>();
-
-    class Node {
-        String symb;
-        String unid;
-        List<Node> children;
-
-        Node(String symb, String unid) {
-            this.symb = symb;
-            this.unid = unid;
-            this.children = new ArrayList<>();
-        }
-
-        void addChild(Node child) {
-            this.children.add(child);
-        }
-
-        void printNode(String indent) {
-            System.out.println(indent + "Symbol: " + symb + ", UNID: " + unid);
-            for (Node child : children) {
-                child.printNode(indent + "  ");
-            }
-        }
-    }
 
     class SymbolEntry {
         String entryType;
@@ -103,11 +81,13 @@ class ScopeAnalyzer {
             String functionID;
             String functionName;
             String[] parameters;  
+            String type;
             Scope scope;
     
-            FunctionSymbolEntry(String functionID, String functionName, String[] parameters, Scope scope) {
+            FunctionSymbolEntry(String functionID, String functionName,String type, String[] parameters, Scope scope) {
                 this.functionID = functionID;
                 this.functionName = functionName;
+                this.type = type;
                 this.parameters = parameters;
                 this.scope = scope;
             }
@@ -116,9 +96,9 @@ class ScopeAnalyzer {
         class FunctionSymbolTable {
             private Map<String, FunctionSymbolEntry> functionTable = new HashMap<>();
     
-            void addFunction(String functionName, String[] parameters, Scope scope) {
+            void addFunction(String functionName, String[] parameters,String type, Scope scope) {
                 String functionID = UUID.randomUUID().toString();  // Generate unique identifier for the function
-                FunctionSymbolEntry entry = new FunctionSymbolEntry(functionID, functionName, parameters, scope);
+                FunctionSymbolEntry entry = new FunctionSymbolEntry(functionID, functionName, type, parameters, scope);
                 functionTable.put(functionID, entry);
                 System.out.println("Added to Function Symbol Table: " + functionName + " with ID: " + functionID);
             }
@@ -127,7 +107,7 @@ class ScopeAnalyzer {
                 System.out.println("\nFunction Symbol Table Contents:");
                 for (Map.Entry<String, FunctionSymbolEntry> entry : functionTable.entrySet()) {
                     FunctionSymbolEntry function = entry.getValue();
-                    System.out.println("Function ID: " + function.functionID + ", Name: " + function.functionName + ", Scope: " + function.scope.scopeName);
+                    System.out.println("Function ID: " + function.functionID + ",Return Type:" + function.type + ", Name: " + function.functionName + ", Scope: " + function.scope.scopeName);
                     System.out.print("Parameters: ");
                     for (String param : function.parameters) {
                         System.out.print(param + " ");
@@ -157,6 +137,13 @@ class ScopeAnalyzer {
             if (!node.children.isEmpty()) {
                 currVarType = node.children.get(0).symb;
                 System.out.println("Variable Type found: " + currVarType);
+            }
+        }
+
+        if (node.symb.equals("FTYP")) {
+            if (!node.children.isEmpty()) {
+                funcType = node.children.get(0).symb;
+                System.out.println("Function Type found: " + funcType);
             }
         }
 
@@ -269,7 +256,7 @@ class ScopeAnalyzer {
                             currentScope = newFunctionScope;
 
                             String[] parameters = {"(num","num","num)"}; 
-                            functionTable.addFunction(functionName, parameters, currentScope);
+                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
 
                         }else{
                             Scope newFunctionScope = new Scope(functionName, currentScope);
@@ -279,7 +266,7 @@ class ScopeAnalyzer {
                             isSubFunction = false;
 
                             String[] parameters = {"(num","num","num)"}; 
-                            functionTable.addFunction(functionName, parameters, currentScope);
+                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
                         }
                     }
                 }
@@ -458,13 +445,27 @@ class ScopeAnalyzer {
         while (scopeToCheck != null) {
             for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
                 if (entry.functionName.equals(functionName)) {
-                    return entry.functionID;  
+                    return entry.type;  
                 }
             }
             scopeToCheck = scopeToCheck.parentScope;  
         }
         return null;  
     }
+
+    public Scope getScopeForFunction(String functionName) {
+        // Iterate through the function table to find the function by name
+        for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
+            if (entry.functionName.equals(functionName)) {
+                return entry.scope;  // Return the scope associated with the function
+            }
+        }
+        
+        // If no function with the given name is found, return null
+        System.err.println("Error: Function '" + functionName + "' not found in the function table.");
+        return null;
+    }
+    
     
     
 
@@ -472,7 +473,6 @@ class ScopeAnalyzer {
         ScopeAnalyzer analyzer = new ScopeAnalyzer();
         String filePath = "syntax_tree.xml";
         
-
         Node root = analyzer.parseSyntaxTree(filePath);
         analyzer.printTree(root);
 
