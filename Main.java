@@ -10,28 +10,25 @@ public class Main {
     private JTextArea outputArea;
 
     public static void main(String[] args) {
-        // Set up the GUI
         JFrame frame = new JFrame("Compiler Frontend");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(600, 500);
 
-        // Create a JTextArea for displaying output
         JTextArea outputArea = new JTextArea();
-        outputArea.setEditable(false);  // Users can't edit output
-        JScrollPane scrollPane = new JScrollPane(outputArea);  // Scrollbar for the text area
+        outputArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setPreferredSize(new Dimension(580, 400));
 
-        // Redirect System.out to JTextArea
+   
         PrintStream printStream = new PrintStream(new CustomOutputStream(outputArea));
-        System.setOut(printStream);  // Redirect standard output
-        System.setErr(printStream);  // Redirect standard error (optional)
+        System.setOut(printStream);  
+        System.setErr(printStream);  
 
-        // Create buttons for each phase of the process
+     
         JButton lexButton = new JButton("Run Lexing");
         JButton parseButton = new JButton("Run Parsing");
         JButton scopeCheckButton = new JButton("Run Scope Analysis and Type Checking");
 
-        // Set button actions
         lexButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -58,21 +55,17 @@ public class Main {
             }
         });
 
-        // Layout the buttons and output area
-        JPanel panel = new JPanel();  // Panel to hold buttons
+        JPanel panel = new JPanel();  
         panel.add(lexButton);
         panel.add(parseButton);
         panel.add(scopeCheckButton);
 
-        // Add components to the frame
-        frame.add(panel, BorderLayout.NORTH);  // Buttons on top
-        frame.add(scrollPane, BorderLayout.CENTER);  // Output area in the center
+        frame.add(panel, BorderLayout.NORTH); 
+        frame.add(scrollPane, BorderLayout.CENTER);
 
-        // Display the frame
         frame.setVisible(true);
     }
 
-    // Custom output stream to redirect console output to JTextArea
     public static class CustomOutputStream extends OutputStream {
         private JTextArea textArea;
 
@@ -83,7 +76,7 @@ public class Main {
         @Override
         public void write(int b) {
             textArea.append(String.valueOf((char) b));
-            textArea.setCaretPosition(textArea.getDocument().getLength());  // Auto-scroll to bottom
+            textArea.setCaretPosition(textArea.getDocument().getLength()); 
         }
     }
 }

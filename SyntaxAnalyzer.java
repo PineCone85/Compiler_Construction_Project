@@ -181,7 +181,7 @@ class ScopeAnalyzer {
                 if(isFuncParameters){
                     boolean isDuplicate = false;
 
-                    String varKey = currVarName + "@" + currentScope.scopeName;
+                    String varKey = currVarName + "@" + currentScope.scopeName + "@" + node.unid;
 
                     for (SymbolEntry entry : symbolTable.symbolTable.values()) {
                         if (entry.name.equals(varKey) && entry.scope == currentScope) {
@@ -204,7 +204,7 @@ class ScopeAnalyzer {
                 }else if (!currVarType.isEmpty()) {
                     boolean isDuplicate = false;
 
-                    String varKey = currVarName + "@" + currentScope.scopeName;
+                    String varKey = currVarName + "@" + currentScope.scopeName + "@" + node.unid;
 
 
                     for (SymbolEntry entry : symbolTable.symbolTable.values()) {
@@ -233,15 +233,20 @@ class ScopeAnalyzer {
 
                     while (scopeToCheck != null) {
                         String varKey = currVarName + "@" + scopeToCheck.scopeName;
+                    
                         for (SymbolEntry entry : symbolTable.symbolTable.values()) {
-                            if (entry.name.equals(varKey) && entry.entryType.equals("VNAME") && entry.scope == scopeToCheck) {
+                            String entryKey = entry.name.split("@")[0] + "@" + entry.scope.scopeName; 
+                    
+                            if (entryKey.equals(varKey) && entry.entryType.equals("VNAME") && entry.scope == scopeToCheck) {
                                 isDeclared = true;
                                 break;
                             }
                         }
+                    
                         if (isDeclared) break;  
                         scopeToCheck = scopeToCheck.parentScope;  
                     }
+                    
 
                     if (!isDeclared) {
                         if(scopeSuccess){
@@ -404,11 +409,9 @@ class ScopeAnalyzer {
         String unid = getTagValue("UNID", element);
         String symb = getTagValue("SYMB", element);
     
-        // Create the current node, and set the parent
         Node currentNode = new Node(symb, unid);
-        currentNode.parent = parent;  // Set the parent of the current node
-    
-        // Process the children
+        currentNode.parent = parent;  
+        
         NodeList childrenElements = element.getElementsByTagName("CHILDREN");
         if (childrenElements != null && childrenElements.getLength() > 0) {
             NodeList childIDs = childrenElements.item(0).getChildNodes();
@@ -458,13 +461,19 @@ class ScopeAnalyzer {
         Scope scopeToCheck = currentScope;
         while (scopeToCheck != null) {
             String varKey = varName + "@" + scopeToCheck.scopeName;
-            if (symbolTable.symbolTable.containsKey(varKey)) {
-                return true;  
+            
+            for (SymbolEntry entry : symbolTable.symbolTable.values()) {
+                String entryKey = entry.name.split("@")[0] + "@" + entry.scope.scopeName;  
+                if (entryKey.equals(varKey) && entry.entryType.equals("VNAME")) {
+                    return true; 
+                }
             }
+    
             scopeToCheck = scopeToCheck.parentScope;  
         }
         return false;  
     }
+    
 
     public boolean isFunctionDeclared(String functionName, Scope currentScope) {
         Scope scopeToCheck = currentScope;
@@ -483,13 +492,20 @@ class ScopeAnalyzer {
         Scope scopeToCheck = currentScope;
         while (scopeToCheck != null) {
             String varKey = varName + "@" + scopeToCheck.scopeName;
-            if (symbolTable.symbolTable.containsKey(varKey)) {
-                return symbolTable.symbolTable.get(varKey).varOrFuncType;  
+            
+            for (SymbolEntry entry : symbolTable.symbolTable.values()) {
+                String entryKey = entry.name.split("@")[0] + "@" + entry.scope.scopeName;  
+    
+                if (entryKey.equals(varKey) && entry.entryType.equals("VNAME")) {
+                    return entry.varOrFuncType;  
+                }
             }
+    
             scopeToCheck = scopeToCheck.parentScope;  
         }
-        return null;  
+        return null; 
     }
+    
 
     public String getFunctionReturnType(String functionName, Scope currentScope) {
         Scope scopeToCheck = currentScope;
