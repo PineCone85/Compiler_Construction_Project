@@ -530,7 +530,7 @@ class Parser {
     }
 
     static boolean isNumber() {
-        return tokens.get(index).matches("\\d+");
+        return tokens.get(index).matches("-?\\d+(\\.\\d+)?");
     }
 
     static boolean isStringConst() {
@@ -584,35 +584,46 @@ class Parser {
         }
     }
 
-        public void parse(){
-            String inputFilePath = "source_code.txt";
-            String parsedInputFilePath = "parsedCode.txt";
-
-            StringBuilder input = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new FileReader(inputFilePath))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    input.append(line.trim()).append(" ");
-                }
-            } catch (IOException e) {
-                System.err.println("Error reading the input file: " + e.getMessage());
-                return;
+    public void parse() {
+        String inputFilePath = "source_code.txt";
+        String parsedInputFilePath = "parsedCode.txt";
+    
+        StringBuilder input = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(inputFilePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                input.append(line.trim()).append(" ");
             }
-
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(parsedInputFilePath))) {
-                writer.write(input.toString().trim());
-            } catch (IOException e) {
-                System.err.println("Error writing the parsed input to file: " + e.getMessage());
-                return;
-            }
-
-            System.out.println("Parsed input has been saved to " + parsedInputFilePath);
-
-            String inputString = input.toString().trim();
-            tokens = tokenize(inputString);
-
-            TreeNode syntaxTree = parsePROG();
-
-            saveTreeToXML(syntaxTree, "syntax_tree.xml");
+        } catch (IOException e) {
+            System.err.println("Error reading the input file: " + e.getMessage());
+            System.exit(1);
+            return;
         }
+    
+        String inputString = input.toString().trim();
+    
+        // Add spaces around specific symbols using regular expressions
+        inputString = inputString
+            .replaceAll(",", " , ")
+            .replaceAll("\\(", " ( ")
+            .replaceAll("\\)", " ) ")
+            .replaceAll(";", " ; ");
+    
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(parsedInputFilePath))) {
+            writer.write(inputString.trim());
+        } catch (IOException e) {
+            System.err.println("Error writing the parsed input to file: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+    
+        tokens = tokenize(inputString);
+    
+        TreeNode syntaxTree = parsePROG();
+    
+        System.out.println("Parsing phase has passed! Syntax tree saved to 'syntax_tree.xml'");
+    
+        saveTreeToXML(syntaxTree, "syntax_tree.xml");
     }
+    
+}

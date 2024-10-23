@@ -3,7 +3,8 @@ import javax.xml.parsers.*;
 import java.io.File;
 import java.util.ArrayList;           
 import java.util.List;              
-import java.util.HashMap;             
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;                 
 import java.util.UUID;
 
@@ -25,7 +26,6 @@ class ScopeAnalyzer {
             this.childScopes.add(childScope);
         }
     }
-
     public Scope mainScope = new Scope("main", null); 
     public Scope currentScope = mainScope;  
     public String currVarType = "";
@@ -35,9 +35,10 @@ class ScopeAnalyzer {
     public boolean isSubFunction = false;
     public boolean isFuncParameters = false;
     public int declarationCounter = 0;
-    public Map<String, String> functionCalls = new HashMap<>();
+    public LinkedHashMap<String, String> functionCalls = new LinkedHashMap<>();
     public boolean nextEndIsAfterSubFunc = false;
     public boolean endSubFunc = false;
+    public int endCounter = 0;
 
     class SymbolEntry {
         String entryType;
@@ -57,17 +58,16 @@ class ScopeAnalyzer {
         private Map<String, SymbolEntry> symbolTable;
 
         SymbolTable() {
-            symbolTable = new HashMap<>();
+            symbolTable = new LinkedHashMap<>();
         }
 
         void addEntry(String entryType, String name, String varOrFuncType, Scope scope) {
             SymbolEntry entry = new SymbolEntry(entryType, name, varOrFuncType, scope);
             symbolTable.put(name, entry);
-            System.out.println("Added to Symbol Table: " + name + ", Type: " + varOrFuncType + ", Scope: " + scope.scopeName);
         }
 
         void printSymbolTable() {
-            System.out.println("\nSymbol Table Contents:");
+            System.out.println("\nVtable Table Contents:");
             for (Map.Entry<String, SymbolEntry> entry : symbolTable.entrySet()) {
                 SymbolEntry symbol = entry.getValue();
                 System.out.println("Name: " + symbol.name + ", Type: " + symbol.varOrFuncType + ", Scope: " + symbol.scope.scopeName);
@@ -94,17 +94,16 @@ class ScopeAnalyzer {
         }
 
         class FunctionSymbolTable {
-            private Map<String, FunctionSymbolEntry> functionTable = new HashMap<>();
+            private Map<String, FunctionSymbolEntry> functionTable = new LinkedHashMap<>();
     
             void addFunction(String functionName, String[] parameters,String type, Scope scope) {
                 String functionID = UUID.randomUUID().toString();  // Generate unique identifier for the function
                 FunctionSymbolEntry entry = new FunctionSymbolEntry(functionID, functionName, type, parameters, scope);
                 functionTable.put(functionID, entry);
-                System.out.println("Added to Function Symbol Table: " + functionName + " with ID: " + functionID);
             }
     
             void printFunctionTable() {
-                System.out.println("\nFunction Symbol Table Contents:");
+                System.out.println("\nFtable Symbol Table Contents:");
                 for (Map.Entry<String, FunctionSymbolEntry> entry : functionTable.entrySet()) {
                     FunctionSymbolEntry function = entry.getValue();
                     System.out.println("Function ID: " + function.functionID + ",Return Type:" + function.type + ", Name: " + function.functionName + ", Scope: " + function.scope.scopeName);
@@ -129,8 +128,6 @@ class ScopeAnalyzer {
 
         if (node.symb.equals("SUBFUNCS")) {
             nextEndIsAfterSubFunc = true;
-
-
             Node funcNode = node.children.get(0);
             boolean hasSubFunction = false;
             if(funcNode.children.size() != 0){
@@ -139,20 +136,15 @@ class ScopeAnalyzer {
             if (hasSubFunction) {
                 endSubFunc = false;
                 isSubFunction = true;  
-                System.out.println("Subfunctions detected.");
             } else {
                 endSubFunc = true;
                 isSubFunction = false;
-                System.out.println("No subfunctions found, SUBFUNCS is nullable.");
             }
         }
 
         if (node.symb.equals("end")) {
-            if(nextEndIsAfterSubFunc){
-                nextEndIsAfterSubFunc = false;
-                if(endSubFunc){
-                    endSubFunc = false;
-                    System.out.println("Moving up!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"+ currentScope.parentScope.scopeName);
+            if(node.parent.symb.equals("BODY")){
+                if(currentScope != mainScope){
                     currentScope = currentScope.parentScope;
                 }
             }
@@ -161,21 +153,18 @@ class ScopeAnalyzer {
         if (node.symb.equals("VTYP")) {
             if (!node.children.isEmpty()) {
                 currVarType = node.children.get(0).symb;
-                System.out.println("Variable Type found: " + currVarType);
             }
         }
 
         if (node.symb.equals("FTYP")) {
             if (!node.children.isEmpty()) {
                 funcType = node.children.get(0).symb;
-                System.out.println("Function Type found: " + funcType);
             }
         }
 
         if (node.symb.equals("VNAME")) {
             if (!node.children.isEmpty()) {
                 currVarName = node.children.get(0).symb;
-                System.out.println("Variable Name found: " + currVarName);
 
                 if(declarationCounter >= 3){
                     isFuncParameters = false;
@@ -197,6 +186,7 @@ class ScopeAnalyzer {
 
                     if (isDuplicate) {
                         System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
+                        System.exit(1);
                     } else {
                         symbolTable.addEntry("VNAME", varKey, "num", currentScope);
                     }
@@ -217,6 +207,7 @@ class ScopeAnalyzer {
 
                     if (isDuplicate) {
                         System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
+                        System.exit(1);
                     } else {
                         symbolTable.addEntry("VNAME", varKey, currVarType, currentScope);
                     }
@@ -231,7 +222,6 @@ class ScopeAnalyzer {
                         String varKey = currVarName + "@" + scopeToCheck.scopeName;
                         for (SymbolEntry entry : symbolTable.symbolTable.values()) {
                             if (entry.name.equals(varKey) && entry.entryType.equals("VNAME") && entry.scope == scopeToCheck) {
-                                System.out.println("Variable '" + currVarName + "' found in scope: " + scopeToCheck.scopeName);
                                 isDeclared = true;
                                 break;
                             }
@@ -242,6 +232,7 @@ class ScopeAnalyzer {
 
                     if (!isDeclared) {
                         System.err.println("Error: Variable '" + currVarName + "' has not been declared in the current or ancestor scopes.");
+                        System.exit(1);
                     }
 
                     currVarName = "";
@@ -254,17 +245,16 @@ class ScopeAnalyzer {
             String functionName = node.children.get(0).symb;
 
             if (isFuncCall) {
-                System.out.println("Function call detected: " + functionName);
                 functionCalls.put(functionName, currentScope.scopeName);
                 isFuncCall = false;
             } else {
-                System.out.println("Function declaration detected: " + functionName);
+
                 isFuncParameters = true;             
 
                     if (functionName.equals(currentScope.scopeName)) {
                         System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
+                        System.exit(1);
                     }else{
-                        System.out.println(currentScope.scopeName);
                         boolean siblingConflict = false;
     
                         for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
@@ -275,11 +265,10 @@ class ScopeAnalyzer {
                         } 
                         if(siblingConflict){
                             System.err.println("Error: Function " + functionName +  " cannot have the same name as a sibling in the scope.");
+                            System.exit(1);
                         }else{
                             Scope newFunctionScope = new Scope(functionName, currentScope);
                             currentScope.addChildScope(newFunctionScope);
-                            System.out.println("New function scope opened: " + functionName);
-                            System.out.println("Moving DOWN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + newFunctionScope.scopeName);
                             
                             currentScope = newFunctionScope;
                             isSubFunction = false;  
@@ -309,6 +298,7 @@ class ScopeAnalyzer {
                 if (callingScope.scopeName.equals(functionName)) {
                     if (functionName.equals("main")) {
                         System.err.println("Error: Can't recurse main.");
+                        System.exit(1);
                     } else {
                         System.out.println("Recursion detected in function: " + functionName);
                     }
@@ -324,10 +314,12 @@ class ScopeAnalyzer {
                         System.out.println("Function call '" + functionName + "' is in an immediate child scope of '" + callingScopeName + "'.");
                     } else {
                         System.err.println("Error: Function '" + functionName + "' not found in immediate scope or child scope of '" + callingScopeName + "'.");
+                        System.exit(1);
                     }
                 }
             } else {
                 System.err.println("Error: Scope '" + callingScopeName + "' not found.");
+                System.exit(1);
             }
         }
     }
@@ -376,9 +368,12 @@ class ScopeAnalyzer {
     private Node parseNode(Element element, Node parent) {
         String unid = getTagValue("UNID", element);
         String symb = getTagValue("SYMB", element);
-
+    
+        // Create the current node, and set the parent
         Node currentNode = new Node(symb, unid);
-
+        currentNode.parent = parent;  // Set the parent of the current node
+    
+        // Process the children
         NodeList childrenElements = element.getElementsByTagName("CHILDREN");
         if (childrenElements != null && childrenElements.getLength() > 0) {
             NodeList childIDs = childrenElements.item(0).getChildNodes();
@@ -394,9 +389,10 @@ class ScopeAnalyzer {
                 }
             }
         }
-
+    
         return currentNode;
     }
+    
 
     private Element findElementByUNID(String unid, Element parent) {
         NodeList nodes = parent.getElementsByTagName("NODE");
@@ -408,7 +404,7 @@ class ScopeAnalyzer {
         }
         return null;
     }
-
+    
     private String getTagValue(String tag, Element element) {
         NodeList nodeList = element.getElementsByTagName(tag);
         if (nodeList != null && nodeList.getLength() > 0) {
@@ -481,6 +477,7 @@ class ScopeAnalyzer {
         }
 
         System.err.println("Error: Function '" + functionName + "' not found in the function table.");
+        System.exit(1);
         return null;
     }
     
@@ -492,15 +489,16 @@ class ScopeAnalyzer {
         String filePath = "syntax_tree.xml";
         
         Node root = analyzer.parseSyntaxTree(filePath);
-        analyzer.printTree(root);
 
         analyzer.depthFirstTraversal(root);
         
         analyzer.checkFuncCall();
         analyzer.printAllTables();
+        System.out.println("\nScope analysis phase has Passed, now moving to Type checking...");
 
         TypeChecker typerChecker = new TypeChecker(analyzer);
-        typerChecker.depthFirstTraversal(root);      
+        typerChecker.depthFirstTraversal(root);     
+        System.out.println("\nType checking phase has Passed!"); 
     }
 }
 

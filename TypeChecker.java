@@ -150,8 +150,8 @@ public class TypeChecker {
         Node atomicNode3 = callNode.children.get(6);
 
         String atomic1Type = typecheckATOMIC(atomicNode1);
-        String atomic2Type = typecheckATOMIC(atomicNode1);
-        String atomic3Type = typecheckATOMIC(atomicNode1);
+        String atomic2Type = typecheckATOMIC(atomicNode2);
+        String atomic3Type = typecheckATOMIC(atomicNode3);
 
         if( atomic1Type.equals("num") && atomic3Type.equals("num") && atomic2Type.equals("num")){
             return typecheckFNAME(fnameNode);
@@ -528,6 +528,7 @@ public class TypeChecker {
         System.out.println("Program is correctly typed");
        }else{
         System.out.println("Program is not correctly typed");
+        System.exit(1);
        } 
     }
     

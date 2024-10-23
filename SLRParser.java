@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Stack;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -13,7 +14,7 @@ import java.io.File;
 
 public class SLRParser {
 
-    private Map<String, String> parseTable = new HashMap<>();
+    private LinkedHashMap<String, String> parseTable = new LinkedHashMap<>();
     private Stack<Integer> stateStack = new Stack<>();
     private Stack<String> symbolStack = new Stack<>();
 
@@ -43,8 +44,6 @@ public class SLRParser {
                         String key = state + "," + token; 
                         String action = row[i];
                         parseTable.put(key, action);
-    
-                        System.out.println("Key: " + key + " -> Action: " + action);
                     }
                 }
             }
@@ -62,6 +61,7 @@ public void parseInput(String input) {
     while (i <= tokens.length) {
         if (stateStack.isEmpty()) {
             System.out.println("Error: State stack is empty, cannot proceed.");
+            System.exit(1);
             return;
         }
 
@@ -69,11 +69,10 @@ public void parseInput(String input) {
         String currentToken = (i < tokens.length) ? tokens[i] : "$"; 
 
         String action = parseTable.get(currentState + "," + currentToken);
-        System.out.println("Current State: " + currentState + ", Current Token: " + currentToken);
-        System.out.println("Action: " + action);
 
         if (action == null) {
             System.out.println("Error: No valid action for state " + currentState + " and token " + currentToken);
+            System.exit(1);
             return;
         }
 
@@ -91,6 +90,7 @@ public void parseInput(String input) {
             int popCount = getPopCount(production);
             if (stateStack.size() < popCount || symbolStack.size() < popCount) {
                 System.out.println("Error: Stack underflow during reduction. State or symbol stack is too small.");
+                System.exit(1);
                 return;
             }
 
@@ -109,6 +109,7 @@ public void parseInput(String input) {
                 symbolStack.push(lhs);
             } else {
                 System.out.println("Error: No valid goto for state " + currentState + " and non-terminal " + lhs);
+                System.exit(1);
                 return;
             }
         } else if (action.equals("acc")) {
@@ -116,6 +117,7 @@ public void parseInput(String input) {
             return;
         } else {
             System.out.println("Error: Invalid action " + action);
+            System.exit(1);
             return;
         }
     }
