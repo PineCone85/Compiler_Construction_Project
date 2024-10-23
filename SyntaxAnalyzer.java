@@ -120,6 +120,7 @@ class ScopeAnalyzer {
     private FunctionSymbolTable functionTable = new FunctionSymbolTable(); 
 
     public void depthFirstTraversal(Node node) {
+       
         if (node == null) return;
 
         if (node.symb.equals("CALL")) {
@@ -489,6 +490,9 @@ class ScopeAnalyzer {
         String filePath = "syntax_tree.xml";
         
         Node root = analyzer.parseSyntaxTree(filePath);
+        
+        String[] parameters = {"none"}; 
+        functionTable.addFunction("main", parameters, "void", mainScope);
 
         analyzer.depthFirstTraversal(root);
         

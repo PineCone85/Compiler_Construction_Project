@@ -14,7 +14,7 @@ begin
 end
 
 }   
-num F_test ( V_first , V_second , V_third ) {
+num F_test1 ( V_first , V_second , V_third ) {
 text V_t1,
 text V_t2,
 text V_t3,
