@@ -39,6 +39,7 @@ class ScopeAnalyzer {
     public boolean nextEndIsAfterSubFunc = false;
     public boolean endSubFunc = false;
     public int endCounter = 0;
+    public boolean scopeSuccess = true;
 
     class SymbolEntry {
         String entryType;
@@ -95,7 +96,12 @@ class ScopeAnalyzer {
 
         class FunctionSymbolTable {
             private Map<String, FunctionSymbolEntry> functionTable = new LinkedHashMap<>();
-    
+
+            FunctionSymbolTable(){
+                String[] parameters = {"none"}; 
+                addFunction("main", parameters, "void", mainScope);
+            }
+            
             void addFunction(String functionName, String[] parameters,String type, Scope scope) {
                 String functionID = UUID.randomUUID().toString();  // Generate unique identifier for the function
                 FunctionSymbolEntry entry = new FunctionSymbolEntry(functionID, functionName, type, parameters, scope);
@@ -186,8 +192,11 @@ class ScopeAnalyzer {
                     }
 
                     if (isDuplicate) {
-                        System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
-                        System.exit(1);
+                        if(scopeSuccess){
+                            System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
+                            scopeSuccess = false;
+                        }
+                        return;
                     } else {
                         symbolTable.addEntry("VNAME", varKey, "num", currentScope);
                     }
@@ -207,8 +216,11 @@ class ScopeAnalyzer {
                     }
 
                     if (isDuplicate) {
-                        System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
-                        System.exit(1);
+                        if(scopeSuccess){
+                            System.err.println("Error: Variable '" + currVarName + "' has already been declared in the current scope.");
+                            scopeSuccess = false;
+                        }
+                        return;
                     } else {
                         symbolTable.addEntry("VNAME", varKey, currVarType, currentScope);
                     }
@@ -232,8 +244,12 @@ class ScopeAnalyzer {
                     }
 
                     if (!isDeclared) {
-                        System.err.println("Error: Variable '" + currVarName + "' has not been declared in the current or ancestor scopes.");
-                        System.exit(1);
+                        if(scopeSuccess){
+                            System.err.println("Error: Variable '" + currVarName + "' has not been declared in the current or ancestor scopes.");
+                            scopeSuccess = false;
+                        }
+                        return;
+                        
                     }
 
                     currVarName = "";
@@ -252,9 +268,13 @@ class ScopeAnalyzer {
 
                 isFuncParameters = true;             
 
-                    if (functionName.equals(currentScope.scopeName)) {
-                        System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
-                        System.exit(1);
+                    if (functionName.equals(currentScope.scopeName)) {       
+                        if(scopeSuccess){
+                            System.err.println("Error: Function '" + functionName + "' cannot have the same name as its parent scope.");
+                            scopeSuccess = false;
+                        }
+                        //System.exit(1);
+                        return;
                     }else{
                         boolean siblingConflict = false;
     
@@ -265,8 +285,12 @@ class ScopeAnalyzer {
                             }
                         } 
                         if(siblingConflict){
-                            System.err.println("Error: Function " + functionName +  " cannot have the same name as a sibling in the scope.");
-                            System.exit(1);
+                            if(scopeSuccess){
+                                System.err.println("Error: Function " + functionName +  " cannot have the same name as a sibling in the scope.");
+                                scopeSuccess = false;
+                            }
+                            //System.exit(1);
+                            return;
                         }else{
                             Scope newFunctionScope = new Scope(functionName, currentScope);
                             currentScope.addChildScope(newFunctionScope);
@@ -298,8 +322,12 @@ class ScopeAnalyzer {
                 boolean isChildScope = false;
                 if (callingScope.scopeName.equals(functionName)) {
                     if (functionName.equals("main")) {
-                        System.err.println("Error: Can't recurse main.");
-                        System.exit(1);
+                        if(scopeSuccess){
+                            System.err.println("Error: Can't recurse main.");
+                            scopeSuccess = false;
+                        }
+                        //System.exit(1);
+                        return;
                     } else {
                         System.out.println("Recursion detected in function: " + functionName);
                     }
@@ -314,13 +342,19 @@ class ScopeAnalyzer {
                     if (isChildScope) {
                         System.out.println("Function call '" + functionName + "' is in an immediate child scope of '" + callingScopeName + "'.");
                     } else {
-                        System.err.println("Error: Function '" + functionName + "' not found in immediate scope or child scope of '" + callingScopeName + "'.");
-                        System.exit(1);
+                        if(scopeSuccess){
+                            System.err.println("Error: Function '" + functionName + "' not found in immediate scope or child scope of '" + callingScopeName + "'.");
+                            scopeSuccess = false;
+                        }
+                        return;
                     }
                 }
             } else {
-                System.err.println("Error: Scope '" + callingScopeName + "' not found.");
-                System.exit(1);
+                if(scopeSuccess){
+                    System.err.println("Error: Scope '" + callingScopeName + "' not found.");
+                    scopeSuccess = false;
+                }
+                return;
             }
         }
     }
@@ -477,8 +511,11 @@ class ScopeAnalyzer {
             }
         }
 
-        System.err.println("Error: Function '" + functionName + "' not found in the function table.");
-        System.exit(1);
+        if(scopeSuccess){
+            System.err.println("Error: Function '" + functionName + "' not found in the function table.");
+            scopeSuccess = false;
+        }
+        //System.exit(1);
         return null;
     }
     
@@ -486,24 +523,26 @@ class ScopeAnalyzer {
     
 
     public void scopeAndTypeCheck() {
-        ScopeAnalyzer analyzer = new ScopeAnalyzer();
         String filePath = "syntax_tree.xml";
         
-        Node root = analyzer.parseSyntaxTree(filePath);
-        
-        String[] parameters = {"none"}; 
-        functionTable.addFunction("main", parameters, "void", mainScope);
-
-        analyzer.depthFirstTraversal(root);
-        
-        analyzer.checkFuncCall();
-        analyzer.printAllTables();
-        System.out.println("\nScope analysis phase has Passed, now moving to Type checking...");
-
-        TypeChecker typerChecker = new TypeChecker(analyzer);
-        typerChecker.depthFirstTraversal(root);     
-        System.out.println("\nType checking phase has Passed!"); 
+        Node root = this.parseSyntaxTree(filePath); 
+    
+        this.depthFirstTraversal(root);  
+        if (scopeSuccess == true) {
+            this.checkFuncCall(); 
+            this.printAllTables(); 
+            System.out.println("\nScope analysis phase has Passed, now moving to Type checking...");
+    
+            TypeChecker typerChecker = new TypeChecker(this);
+            if (typerChecker.depthFirstTraversal(root)) {
+                System.out.println("\nProgram Correctly typed");
+                System.out.println("\nType checking phase has Passed!"); 
+            } else {
+                System.out.println("\nProgram not correctly typed");
+            }
+        }
     }
+    
 }
 
 

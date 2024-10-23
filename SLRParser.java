@@ -61,7 +61,6 @@ public void parseInput(String input) {
     while (i <= tokens.length) {
         if (stateStack.isEmpty()) {
             System.out.println("Error: State stack is empty, cannot proceed.");
-            System.exit(1);
             return;
         }
 
@@ -72,7 +71,6 @@ public void parseInput(String input) {
 
         if (action == null) {
             System.out.println("Error: No valid action for state " + currentState + " and token " + currentToken);
-            System.exit(1);
             return;
         }
 
@@ -90,7 +88,6 @@ public void parseInput(String input) {
             int popCount = getPopCount(production);
             if (stateStack.size() < popCount || symbolStack.size() < popCount) {
                 System.out.println("Error: Stack underflow during reduction. State or symbol stack is too small.");
-                System.exit(1);
                 return;
             }
 
@@ -109,7 +106,6 @@ public void parseInput(String input) {
                 symbolStack.push(lhs);
             } else {
                 System.out.println("Error: No valid goto for state " + currentState + " and non-terminal " + lhs);
-                System.exit(1);
                 return;
             }
         } else if (action.equals("acc")) {
@@ -117,7 +113,6 @@ public void parseInput(String input) {
             return;
         } else {
             System.out.println("Error: Invalid action " + action);
-            System.exit(1);
             return;
         }
     }

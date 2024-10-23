@@ -596,8 +596,7 @@ class Parser {
             }
         } catch (IOException e) {
             System.err.println("Error reading the input file: " + e.getMessage());
-            System.exit(1);
-            return;
+
         }
     
         String inputString = input.toString().trim();

@@ -1,7 +1,6 @@
     import java.io.*;
     import java.util.*;
     import java.util.regex.*;
-    import java.util.LinkedHashMap;
 
 
     public class Lexer {
@@ -234,10 +233,13 @@
             try {
                 String xmlOutput = lexer.tokenizeToXML("source_code.txt");
                 lexer.saveXMLToFile(xmlOutput, "output.xml");
-                System.out.println("Lexing Phase hase been Passed! Token stream saved to 'ouput.xml'");
+                System.out.println("Lexing Phase has been Passed! Token stream saved to 'output.xml'");
             } catch (IOException | IllegalArgumentException e) {
                 System.err.println(e.getMessage());
-                System.exit(1);
+                // Stop the lexing process but don't exit the program
+                System.out.println("Lexing error occurred. Stopping lexing.");
+                return; // Stops further lexing, but allows the program to continue
             }
         }
+
     }

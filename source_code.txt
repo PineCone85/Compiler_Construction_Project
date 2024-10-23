@@ -1,8 +1,7 @@
 main
-num V_number ,
-
+num V_number,
 begin
-V_number = add ( 0.03 , 2 ) ;  
+V_number = add ( 0.03 , 2 ) ; 
 end
 num F_test ( V_first , V_second , V_third ) {
 text V_t1,

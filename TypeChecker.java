@@ -523,13 +523,8 @@ public class TypeChecker {
         return typecheckFUNCTIONS(subfuncsNode.children.get(0));  
     }
     
-    public void depthFirstTraversal(Node currentNode) {
-       if(typecheckPROG(currentNode)){
-        System.out.println("Program is correctly typed");
-       }else{
-        System.out.println("Program is not correctly typed");
-        System.exit(1);
-       } 
+    public boolean depthFirstTraversal(Node currentNode) {
+        return typecheckPROG(currentNode);
     }
     
 }

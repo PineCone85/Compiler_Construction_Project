@@ -37,7 +37,6 @@ public class Main {
             public void actionPerformed(ActionEvent e) {
                 Lexer lexer = new Lexer();
                 lexer.Lex();
-                System.out.println("Lexing complete!");
             }
         });
 
@@ -48,7 +47,6 @@ public class Main {
                 parser.SLRParsing();
                 Parser parserSynTree = new Parser();
                 parserSynTree.parse();
-                System.out.println("Parsing complete!");
             }
         });
 
@@ -57,7 +55,6 @@ public class Main {
             public void actionPerformed(ActionEvent e) {
                 ScopeAnalyzer analyzer = new ScopeAnalyzer();
                 analyzer.scopeAndTypeCheck();
-                System.out.println("Scope analysis and type checking complete!");
             }
         });
 
