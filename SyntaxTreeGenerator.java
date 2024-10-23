@@ -170,7 +170,7 @@ class Parser {
             node.addChild(parseCOMMAND());
             match(";");
             node.addChild(new TreeNode(";", true));
-    
+
             if (index < tokens.size() && !tokens.get(index).equals("end")) {
                 node.addChild(parseINSTRUC());
             }
@@ -555,7 +555,7 @@ class Parser {
 
     static boolean isAtomicAhead() {
         int tempindex = index;
-        return tokens.get(tempindex + 2).matches("V_[a-zA-Z0-9_]*") || tokens.get(tempindex + 2).matches("\"[A-Za-z ]+\""); 
+        return tokens.get(tempindex + 2).matches("V_[a-zA-Z0-9_]*") || tokens.get(tempindex + 2).matches("\"[A-Za-z ]+\"") || tokens.get(tempindex + 2).matches("-?\\d+(\\.\\d+)?"); 
     }
 
     static void saveTreeToXML(TreeNode tree, String filePath) {

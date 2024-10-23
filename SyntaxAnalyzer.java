@@ -7,6 +7,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;                 
 import java.util.UUID;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 
 class ScopeAnalyzer {
 
@@ -99,11 +102,11 @@ class ScopeAnalyzer {
 
             FunctionSymbolTable(){
                 String[] parameters = {"none"}; 
-                addFunction("main", parameters, "void", mainScope);
+                addFunction("main", parameters, "void", mainScope, "1");
             }
             
-            void addFunction(String functionName, String[] parameters,String type, Scope scope) {
-                String functionID = UUID.randomUUID().toString();  // Generate unique identifier for the function
+            void addFunction(String functionName, String[] parameters,String type, Scope scope,String uid) {
+                String functionID = uid;  // Generate unique identifier for the function
                 FunctionSymbolEntry entry = new FunctionSymbolEntry(functionID, functionName, type, parameters, scope);
                 functionTable.put(functionID, entry);
             }
@@ -181,7 +184,7 @@ class ScopeAnalyzer {
                 if(isFuncParameters){
                     boolean isDuplicate = false;
 
-                    String varKey = currVarName + "@" + currentScope.scopeName + "@" + node.unid;
+                    String varKey = currVarName + "@" + currentScope.scopeName;
 
                     for (SymbolEntry entry : symbolTable.symbolTable.values()) {
                         if (entry.name.equals(varKey) && entry.scope == currentScope) {
@@ -204,7 +207,7 @@ class ScopeAnalyzer {
                 }else if (!currVarType.isEmpty()) {
                     boolean isDuplicate = false;
 
-                    String varKey = currVarName + "@" + currentScope.scopeName + "@" + node.unid;
+                    String varKey = currVarName + "@" + currentScope.scopeName;
 
 
                     for (SymbolEntry entry : symbolTable.symbolTable.values()) {
@@ -304,7 +307,7 @@ class ScopeAnalyzer {
                             isSubFunction = false;  
 
                             String[] parameters = {"(num","num","num)"}; 
-                            functionTable.addFunction(functionName, parameters, funcType, currentScope);
+                            functionTable.addFunction(functionName, parameters, funcType, currentScope, node.unid);
                         
                     }    
                 }
@@ -411,7 +414,7 @@ class ScopeAnalyzer {
     
         Node currentNode = new Node(symb, unid);
         currentNode.parent = parent;  
-        
+
         NodeList childrenElements = element.getElementsByTagName("CHILDREN");
         if (childrenElements != null && childrenElements.getLength() > 0) {
             NodeList childIDs = childrenElements.item(0).getChildNodes();
@@ -534,10 +537,39 @@ class ScopeAnalyzer {
         //System.exit(1);
         return null;
     }
+
+    public String getVar(String varName, Scope mianScope) {
+        Scope scopeToCheck = currentScope;
+        while (scopeToCheck != null) {
+            String varKey = varName + "@" + scopeToCheck.scopeName;
+            
+            for (SymbolEntry entry : symbolTable.symbolTable.values()) {
+                String entryKey = entry.name.split("@")[0] + "@" + entry.scope.scopeName;  
     
+                if (entryKey.equals(varKey) && entry.entryType.equals("VNAME")) {
+                    return entry.name;  
+                }
+            }
     
+            scopeToCheck = scopeToCheck.parentScope;  
+        }
+        return null; 
+    }
     
 
+    public String getFunc(String functionName, Scope currentScope) {
+        Scope scopeToCheck = currentScope;
+        while (scopeToCheck != null) {
+            for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
+                if (entry.functionName.equals(functionName)) {
+                    return entry.type;  
+                }
+            }
+            scopeToCheck = scopeToCheck.parentScope;  
+        }
+        return null;  
+    }
+    
     public void scopeAndTypeCheck() {
         String filePath = "syntax_tree.xml";
         
@@ -552,7 +584,19 @@ class ScopeAnalyzer {
             TypeChecker typerChecker = new TypeChecker(this);
             if (typerChecker.depthFirstTraversal(root)) {
                 System.out.println("\nProgram Correctly typed");
-                System.out.println("\nType checking phase has Passed!"); 
+                System.out.println("\nType checking phase has Passed!");
+                
+                Translator trans = new Translator(this);
+                String translated = trans.translatePROG(root);
+                System.out.println(translated);
+                System.out.println("\nTranslation phase has Passed!\r\n");
+                
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter("translated_program.txt"))) {
+                    writer.write(translated);
+                    System.out.println("\nTranslation written to file: translated_program.txt");
+                } catch (IOException e) {
+                    System.err.println("An error occurred while writing the file: " + e.getMessage());
+                }
             } else {
                 System.out.println("\nProgram not correctly typed");
             }

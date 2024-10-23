@@ -18,48 +18,45 @@ public class Main {
         outputArea.setEditable(false);
         JScrollPane scrollPane = new JScrollPane(outputArea);
         scrollPane.setPreferredSize(new Dimension(580, 400));
-
    
         PrintStream printStream = new PrintStream(new CustomOutputStream(outputArea));
         System.setOut(printStream);  
         System.setErr(printStream);  
 
-     
-        JButton lexButton = new JButton("Run Lexing");
-        JButton parseButton = new JButton("Run Parsing");
-        JButton scopeCheckButton = new JButton("Run Scope Analysis and Type Checking");
+        // Create a single "Compile" button
+        JButton compileButton = new JButton("Compile");
 
-        lexButton.addActionListener(new ActionListener() {
+        // Add action listener for "Compile" button
+        compileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Lexer lexer = new Lexer();
-                lexer.Lex();
+                try {
+                    // Lexing Phase
+                    Lexer lexer = new Lexer();
+                    lexer.Lex();
+
+                    // Parsing Phase
+                    SLRParser parser = new SLRParser();
+                    parser.SLRParsing();
+                    Parser parserSynTree = new Parser();
+                    parserSynTree.parse();
+
+                    // Scope Analysis and Type Checking Phase
+                    ScopeAnalyzer analyzer = new ScopeAnalyzer();
+                    analyzer.scopeAndTypeCheck();
+                    
+                } catch (Exception ex) {
+                    System.err.println("Error during compilation: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
             }
         });
 
-        parseButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                SLRParser parser = new SLRParser();
-                parser.SLRParsing();
-                Parser parserSynTree = new Parser();
-                parserSynTree.parse();
-            }
-        });
-
-        scopeCheckButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                ScopeAnalyzer analyzer = new ScopeAnalyzer();
-                analyzer.scopeAndTypeCheck();
-            }
-        });
-
+        // Panel to hold the "Compile" button
         JPanel panel = new JPanel();  
-        panel.add(lexButton);
-        panel.add(parseButton);
-        panel.add(scopeCheckButton);
+        panel.add(compileButton);
 
+        // Add components to frame
         frame.add(panel, BorderLayout.NORTH); 
         frame.add(scrollPane, BorderLayout.CENTER);
 

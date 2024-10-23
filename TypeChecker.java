@@ -192,8 +192,8 @@ public class TypeChecker {
         Node vnameNode = assignNode.children.get(0);  
         String vnameType = typecheckVNAME(vnameNode);  
     
-        if (assignNode.children.size() == 3 && assignNode.children.get(1).symb.equals("<") && assignNode.children.get(2).symb.equals("input")) {
-            if (vnameType.equals("n")) {
+        if (assignNode.children.size() == 2 && assignNode.children.get(1).symb.equals("< input")) {
+            if (vnameType.equals("num")) {
                 return true;  
             } else {
                 System.err.println("Type Error: Only numeric input is allowed, but '" + vnameNode.symb + "' is of type '" + vnameType + "'.");
@@ -283,7 +283,7 @@ public class TypeChecker {
     }
 
     public String typecheckUNOP(Node unopNode) {
-        switch (unopNode.symb) {
+        switch (unopNode.children.get(0).symb) {
             case "not":
                 return "b";  
             case "sqrt":
@@ -378,6 +378,8 @@ public class TypeChecker {
             Node simpleNode = compositNode.children.get(2); 
             String unopType = typecheckUNOP(unopNode);
             String simpleType = typecheckSIMPLE(simpleNode);
+            System.out.println(simpleType);
+            System.out.println(unopType);;
     
             if (unopType.equals("b") && simpleType.equals("b")) {
                 return "b";  

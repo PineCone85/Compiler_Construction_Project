@@ -1,38 +1,14 @@
 main
-num V_number,
+num V_number, num V_number2,
 begin
-V_number = add ( 0.03 , 2 ) ; 
-end
-num F_test ( V_first , V_second , V_third ) {
-text V_t1,
-text V_t2,
-text V_t3,
-
-begin
- 
-end
-
-}   
-num F_test1 ( V_first , V_second , V_third ) {
-text V_t1,
-text V_t2,
-text V_t3,
-
-begin
- 
-end
-
-}
-num F_test ( V_first , V_second , V_third ) {
-text V_t1,
-text V_t2,
-text V_t3,
-
-begin
- 
-end
-
-}
-end
-end
+V_number = add(V_number , V_number2 ); 
+V_number2 = 5; 
+V_number = 5; 
+V_number = 5; 
+V_number = 5; 
+if  and(grt(6,5),grt(6,5)) 
+    then 
+    begin V_number = 5; end 
+    else 
+    begin V_number = 9; end;
 end
