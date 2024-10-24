@@ -49,12 +49,14 @@ class ScopeAnalyzer {
         String name;
         String varOrFuncType; 
         Scope scope; 
+        String ID;
 
-        SymbolEntry(String entryType, String name, String varOrFuncType, Scope scope) {
+        SymbolEntry(String entryType, String name, String varOrFuncType, Scope scope, String ID) {
             this.entryType = entryType;
             this.name = name;
             this.varOrFuncType = varOrFuncType;
             this.scope = scope;
+            this.ID = ID;
         }
     }
 
@@ -65,9 +67,9 @@ class ScopeAnalyzer {
             symbolTable = new LinkedHashMap<>();
         }
 
-        void addEntry(String entryType, String name, String varOrFuncType, Scope scope) {
-            SymbolEntry entry = new SymbolEntry(entryType, name, varOrFuncType, scope);
-            symbolTable.put(name, entry);
+        void addEntry(String entryType, String name, String varOrFuncType, Scope scope, String ID) {
+            SymbolEntry entry = new SymbolEntry(entryType, name, varOrFuncType, scope, ID);
+            symbolTable.put(ID, entry);
         }
 
         void printSymbolTable() {
@@ -94,6 +96,7 @@ class ScopeAnalyzer {
                 this.type = type;
                 this.parameters = parameters;
                 this.scope = scope;
+                
             }
         }
 
@@ -201,7 +204,7 @@ class ScopeAnalyzer {
                         }
                         return;
                     } else {
-                        symbolTable.addEntry("VNAME", varKey, "num", currentScope);
+                        symbolTable.addEntry("VNAME", varKey, "num", currentScope,node.unid);
                     }
                     declarationCounter++;
                 }else if (!currVarType.isEmpty()) {
@@ -225,7 +228,7 @@ class ScopeAnalyzer {
                         }
                         return;
                     } else {
-                        symbolTable.addEntry("VNAME", varKey, currVarType, currentScope);
+                        symbolTable.addEntry("VNAME", varKey, currVarType, currentScope,node.unid);
                     }
                     currVarType = "";
                     currVarName = "";
@@ -558,17 +561,23 @@ class ScopeAnalyzer {
     
 
     public String getFunc(String functionName, Scope currentScope) {
-        Scope scopeToCheck = currentScope;
-        while (scopeToCheck != null) {
-            for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
-                if (entry.functionName.equals(functionName)) {
-                    return entry.type;  
-                }
+    
+        for (FunctionSymbolEntry entry : functionTable.functionTable.values()) {
+            if (entry.functionName.equals(functionName)) {
+                return entry.functionName;  
             }
-            scopeToCheck = scopeToCheck.parentScope;  
         }
-        return null;  
+
+        for (Scope childScope : currentScope.childScopes) {  
+            String result = getFunc(functionName, childScope);
+            if (result != null) {
+                return result; 
+            }
+        }
+        
+        return null;
     }
+    
     
     public void scopeAndTypeCheck() {
         String filePath = "syntax_tree.xml";
@@ -578,27 +587,29 @@ class ScopeAnalyzer {
         this.depthFirstTraversal(root);  
         if (scopeSuccess == true) {
             this.checkFuncCall(); 
-            this.printAllTables(); 
-            System.out.println("\nScope analysis phase has Passed, now moving to Type checking...");
-    
-            TypeChecker typerChecker = new TypeChecker(this);
-            if (typerChecker.depthFirstTraversal(root)) {
-                System.out.println("\nProgram Correctly typed");
-                System.out.println("\nType checking phase has Passed!");
-                
-                Translator trans = new Translator(this);
-                String translated = trans.translatePROG(root);
-                System.out.println(translated);
-                System.out.println("\nTranslation phase has Passed!\r\n");
-                
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter("translated_program.txt"))) {
-                    writer.write(translated);
-                    System.out.println("\nTranslation written to file: translated_program.txt");
-                } catch (IOException e) {
-                    System.err.println("An error occurred while writing the file: " + e.getMessage());
+            if(scopeSuccess == true){
+                this.printAllTables(); 
+                System.out.println("\nScope analysis phase has Passed, now moving to Type checking...");
+        
+                TypeChecker typerChecker = new TypeChecker(this);
+                if (typerChecker.depthFirstTraversal(root)) {
+                    System.out.println("\nProgram Correctly typed");
+                    System.out.println("\nType checking phase has Passed!");
+                    
+                    Translator trans = new Translator(this);
+                    String translated = trans.translatePROG(root);
+                    System.out.println(translated);
+                    System.out.println("\nTranslation phase has Passed!\r\n");
+                    
+                    try (BufferedWriter writer = new BufferedWriter(new FileWriter("translated_program.txt"))) {
+                        writer.write(translated);
+                        System.out.println("\nTranslation written to file: translated_program.txt");
+                    } catch (IOException e) {
+                        System.err.println("An error occurred while writing the file: " + e.getMessage());
+                    }
+                } else {
+                    System.out.println("\nProgram not correctly typed");
                 }
-            } else {
-                System.out.println("\nProgram not correctly typed");
             }
         }
     }

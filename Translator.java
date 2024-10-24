@@ -141,9 +141,9 @@ public class Translator {
         Node atomic2Node = callNode.children.get(4);
         Node atomic3Node = callNode.children.get(6);
 
-        String fname = scopeAnalyzer.getFunc(fnameNode.symb, scopeAnalyzer.mainScope);
+        String fname = scopeAnalyzer.getFunc(fnameNode.children.get(0).symb, scopeAnalyzer.mainScope);
 
-        return "CALL_" + fname + "(" + translateATOMIC(atomic1Node) + translateATOMIC(atomic2Node) + translateATOMIC(atomic3Node) + ")\r\n";
+        return "CALL_" + fname + "(" + translateATOMIC(atomic1Node)+ ", " + translateATOMIC(atomic2Node) +", " + translateATOMIC(atomic3Node) + ")\r\n";
     }
 
     public String translateOP(Node opNode, String place){
