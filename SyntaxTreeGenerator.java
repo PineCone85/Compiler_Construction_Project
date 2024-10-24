@@ -98,8 +98,10 @@ class Parser {
         if (index < tokens.size() && tokens.get(index).equals(expected)) {
             index++;
         } else {
+            index = 0;
             throw new RuntimeException("Expected " + expected + " but found " + 
                 (index < tokens.size() ? tokens.get(index) : "end of input"));
+                
         }
     }
 
@@ -619,6 +621,7 @@ class Parser {
         tokens = tokenize(inputString);
     
         TreeNode syntaxTree = parsePROG();
+        index = 0;
     
         System.out.println("Parsing phase has passed! Syntax tree saved to 'syntax_tree.xml'");
     

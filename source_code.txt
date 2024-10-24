@@ -1,14 +1,1 @@
-main
-num V_number, num V_number2,
-begin
-V_number = add(V_number , V_number2 ); 
-V_number2 = 5; 
-V_number = 5; 
-V_number = 5; 
-V_number = 5; 
-if  and(grt(6,5),grt(6,5)) 
-    then 
-    begin V_number = 5; end 
-    else 
-    begin V_number = 9; end;
-end
+main begin end

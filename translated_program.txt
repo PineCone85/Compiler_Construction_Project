@@ -1,28 +1,3 @@
-(Var2:=V_number@main)
-(Var3:=V_number2@main)
-(Var1 := Var2 + Var3)
-[V_number@main= Var1]
-(Var4:=5)
-[V_number2@main= Var4]
-(Var5:=5)
-[V_number@main= Var5]
-(Var6:=5)
-[V_number@main= Var6]
-(Var7:=5)
-[V_number@main= Var7]
-(Var8:=6)
-(Var9:=5)
-( IF Var8 > Var9 THEN Label1 ELSE Label4 )
-( LABEL Label4) (Var10:=6)
-(Var11:=5)
-( IF Var10 > Var11 THEN Label1 ELSE Label2 )
-(LABEL Label1 ) (Var12:=5)
-[V_number@main= Var12]
- REM END
- (GOTO Label3, LABEL Label2 ) (Var13:=9)
-[V_number@main= Var13]
- REM END
- (LABEL Label3)
  REM END
  STOP
  
