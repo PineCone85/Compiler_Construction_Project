@@ -6,7 +6,6 @@ import java.io.*;
 
 public class Main {
 
-    private JTextArea outputArea;
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Compiler Frontend");

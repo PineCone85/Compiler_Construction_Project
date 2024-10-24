@@ -1,55 +1,55 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <SYNTREE>
     <ROOT>
-        <UNID>1</UNID>
+        <UNID>0</UNID>
         <SYMB>PROG</SYMB>
         <CHILDREN>
+            <ID>1</ID>
             <ID>2</ID>
             <ID>3</ID>
-            <ID>4</ID>
-            <ID>8</ID>
+            <ID>7</ID>
         </CHILDREN>
         <NODE>
-            <PARENT>1</PARENT>
-            <UNID>2</UNID>
+            <PARENT>0</PARENT>
+            <UNID>1</UNID>
             <SYMB>main</SYMB>
             <TERMINAL>main</TERMINAL>
         </NODE>
         <NODE>
-            <PARENT>1</PARENT>
-            <UNID>3</UNID>
+            <PARENT>0</PARENT>
+            <UNID>2</UNID>
             <SYMB>GLOBVARS</SYMB>
         </NODE>
         <NODE>
-            <PARENT>1</PARENT>
-            <UNID>4</UNID>
+            <PARENT>0</PARENT>
+            <UNID>3</UNID>
             <SYMB>ALGO</SYMB>
             <CHILDREN>
+                <ID>4</ID>
                 <ID>5</ID>
                 <ID>6</ID>
-                <ID>7</ID>
             </CHILDREN>
             <NODE>
-                <PARENT>4</PARENT>
-                <UNID>5</UNID>
+                <PARENT>3</PARENT>
+                <UNID>4</UNID>
                 <SYMB>begin</SYMB>
                 <TERMINAL>begin</TERMINAL>
             </NODE>
             <NODE>
-                <PARENT>4</PARENT>
-                <UNID>6</UNID>
+                <PARENT>3</PARENT>
+                <UNID>5</UNID>
                 <SYMB>INSTRUC</SYMB>
             </NODE>
             <NODE>
-                <PARENT>4</PARENT>
-                <UNID>7</UNID>
+                <PARENT>3</PARENT>
+                <UNID>6</UNID>
                 <SYMB>end</SYMB>
                 <TERMINAL>end</TERMINAL>
             </NODE>
         </NODE>
         <NODE>
-            <PARENT>1</PARENT>
-            <UNID>8</UNID>
+            <PARENT>0</PARENT>
+            <UNID>7</UNID>
             <SYMB>FUNCTIONS</SYMB>
         </NODE>
     </ROOT>
